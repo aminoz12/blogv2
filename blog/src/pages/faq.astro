@@ -1,0 +1,145 @@
+---
+import Layout from '../layouts/Layout.astro';
+import LiveChat from '../components/common/LiveChat.astro';
+import JoinMad2MoiCTA from '../components/common/JoinMad2MoiCTA.astro';
+
+const faqs = [
+  {
+    id: 'personal-development',
+    question: 'Comment débuter en développement personnel en toute sécurité ?',
+    answer: 'Pour débuter en développement personnel en toute sécurité, il est essentiel de commencer par l\'auto-évaluation et la communication. Lisez des livres spécialisés, participez à des ateliers ou des communautés en ligne respectables. Établissez toujours des objectifs clairs avec vous-même, utilisez des techniques de bien-être (comme la méditation ou la relaxation), et commencez progressivement avec des pratiques douces. La confiance en soi et l\'acceptation personnelle sont la base de toute exploration du développement personnel.'
+  },
+  {
+    id: 'lifestyle',
+    question: 'Un mode de vie alternatif est-il fait pour moi ?',
+    answer: 'Un mode de vie alternatif n\'est pas fait pour tout le monde et c\'est parfaitement normal. Pour savoir si cela vous convient, posez-vous ces questions : Êtes-vous à l\'aise avec l\'idée d\'explorer de nouvelles expériences ? Avez-vous une communication ouverte et honnête avec vos proches ? Êtes-vous prêt à gérer le changement de manière constructive ? L\'adoption d\'un nouveau mode de vie nécessite une grande maturité émotionnelle, une communication excellente et des valeurs claires. Si vous avez des doutes, prenez le temps de réfléchir et de discuter avec vos proches.'
+  },
+  {
+    id: 'communication',
+    question: 'Comment parler de mes aspirations à mon partenaire ?',
+    answer: 'Parler de ses aspirations peut être intimidant, mais c\'est essentiel pour une relation épanouie. Choisissez un moment calme et privé, pas pendant les moments intimes. Commencez par des rêves plus simples et progressez vers les plus ambitieux. Utilisez des phrases comme "J\'aimerais explorer..." ou "J\'ai pensé à..." plutôt que "Je veux que tu...". Soyez prêt à entendre les aspirations de votre partenaire aussi. Rappelez-vous que partager un rêve ne signifie pas vouloir l\'expérimenter immédiatement - c\'est un processus d\'exploration mutuelle.'
+  },
+  {
+    id: 'wellness',
+    question: 'Comment choisir et utiliser des produits de bien-être en toute sécurité ?',
+    answer: 'Pour choisir des produits de bien-être, privilégiez des matériaux de qualité et des marques réputées. Évitez les produits bon marché qui peuvent contenir des substances toxiques. Commencez par des tailles et des intensités modérées. Pour l\'utilisation, suivez toujours les instructions du fabricant, nettoyez avant et après chaque utilisation, et stockez dans un endroit propre et sec. Respectez les limites de votre corps et arrêtez si vous ressentez de l\'inconfort. N\'oubliez pas que les produits de bien-être sont des compléments à votre routine, pas des remplacants à un mode de vie sain.'
+  },
+  {
+    id: 'creative-expression',
+    question: 'Comment créer des scénarios d\'expression créative intéressants ?',
+    answer: 'Pour créer des scénarios d\'expression créative captivants, commencez par identifier vos intérêts communs. Créez des personnages avec des motivations claires et des défis. Établissez des règles et des limites avant de commencer. Utilisez des accessoires, des vêtements ou des décors pour vous immerger dans le rôle. Communiquez pendant l\'activité pour ajuster l\'intensité. N\'oubliez pas que l\'expression créative est un jeu - soyez créatifs et amusez-vous ! Commencez par des scénarios simples et complexifiez progressivement selon votre confort.'
+  },
+  {
+    id: 'consentement',
+    question: 'Comment s\'assurer du consentement dans les relations personnelles ?',
+    answer: 'Le consentement doit être explicite, enthousiaste et continu. Il peut être retiré à tout moment. Utilisez des systèmes de communication clairs comme des signaux convenus ou des mots de sécurité. Vérifiez régulièrement le bien-être de votre partenaire. Le consentement sous l\'influence de substances n\'est pas valide. Rappelez-vous que "non" signifie toujours "non", même si la personne a dit "oui" avant. La communication ouverte et le respect des limites sont la base de toute relation saine.'
+  }
+];
+---
+
+<Layout 
+  title="FAQ - Questions Fréquentes | Mad2Moi Blog"
+  description="Trouvez des réponses à vos questions sur les relations, le développement personnel, la communication et plus encore. Conseils d'experts pour adultes."
+  tags={['FAQ', 'Relations', 'Développement Personnel', 'Communication', 'Bien-être', 'Expression Créative', 'Consentement']}
+  type="website"
+  canonical="https://your-domain.com/faq"
+>
+  <!-- Hero Section -->
+  <section class="relative py-20 bg-gradient-to-br from-primary-900 via-secondary-900 to-primary-800 overflow-hidden">
+    <div class="absolute inset-0 bg-black/20"></div>
+    <div class="absolute inset-0 bg-gradient-to-r from-primary-600/20 to-sensual-600/20"></div>
+    
+    <div class="relative z-10 text-center max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 class="text-5xl md:text-6xl font-bold mb-6 text-glow" data-translate="Questions Fréquentes">
+        <span class="text-white">Questions</span>
+        <span class="text-primary-400">Fréquentes</span>
+      </h1>
+      <p class="text-xl text-secondary-300 mb-8 leading-relaxed" data-translate="Trouvez des réponses claires et expertes à vos questions sur le développement personnel, les relations et le bien-être.">
+        Trouvez des réponses claires et expertes à vos questions sur le développement personnel, 
+        les relations et le bien-être.
+      </p>
+      
+      <div class="inline-flex items-center px-4 py-2 bg-primary-500/20 backdrop-blur-sm border border-primary-500/30 rounded-full text-primary-300 text-sm font-medium">
+        <span class="mr-2">💡</span>
+        <span data-translate="{faqs.length} questions répondues">{faqs.length} questions répondues</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="py-20 bg-gradient-to-b from-secondary-900 to-secondary-800">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="space-y-6">
+        {faqs.map((faq, index) => (
+          <div class="card group" id={faq.id}>
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-primary-500/20 to-sensual-500/20 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                <span class="text-2xl">❓</span>
+              </div>
+              <div class="flex-1">
+                <h3 class="text-xl font-semibold text-white mb-3 font-elegant" data-translate={faq.question}>
+                  {faq.question}
+                </h3>
+                <div class="prose prose-invert max-w-none">
+                  <p class="text-secondary-300 leading-relaxed" data-translate={faq.answer}>
+                    {faq.answer}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Additional Help Section -->
+  <section class="py-20 bg-gradient-to-r from-primary-900 to-secondary-900">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-3xl font-bold text-white mb-6 font-elegant" data-translate="Besoin d'Aide Supplémentaire ?">
+        Besoin d'Aide Supplémentaire ?
+      </h2>
+      <p class="text-xl text-primary-200 mb-10 max-w-3xl mx-auto leading-relaxed" data-translate="Si vous n'avez pas trouvé la réponse à votre question, n'hésitez pas à nous contacter. Notre équipe d'experts est là pour vous aider.">
+        Si vous n'avez pas trouvé la réponse à votre question, n'hésitez pas à nous contacter. 
+        Notre équipe d'experts est là pour vous aider.
+      </p>
+      
+      <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
+        <a href="/contact" class="btn-primary text-lg px-10 py-4 group">
+          <span class="mr-2">📧</span>
+          <span data-translate="Nous Contacter">Nous Contacter</span>
+          <span class="ml-2 group-hover:translate-x-1 transition-transform">→</span>
+        </a>
+        <a href="/blog" class="btn-secondary text-lg px-10 py-4">
+          <span class="mr-2">📚</span>
+          <span data-translate="Explorer le Blog">Explorer le Blog</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live Chat -->
+  <LiveChat />
+  
+  <!-- Join Mad2Moi CTA -->
+  <JoinMad2MoiCTA />
+</Layout>
+
+<style>
+  .text-glow {
+    text-shadow: 0 0 20px rgba(236, 72, 153, 0.5);
+  }
+  
+  .prose {
+    color: #cbd5e1;
+  }
+  
+  .prose p {
+    margin-bottom: 1rem;
+  }
+  
+  .prose p:last-child {
+    margin-bottom: 0;
+  }
+</style>
+

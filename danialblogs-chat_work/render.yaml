@@ -1,0 +1,52 @@
+services:
+  # Admin Blog Application
+  - type: web
+    name: mad2moi-admin
+    env: node
+    plan: free
+    buildCommand: cd adminblog && npm install && npm run build
+    startCommand: cd adminblog && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_DRIVER
+        value: mongodb
+      - key: OPENAI_API_KEY
+        sync: false  # Set this manually in Render dashboard
+      - key: MONGO_URI
+        sync: false  # Set this manually in Render dashboard
+      - key: MONGO_DB_NAME
+        value: mad2moi_blog
+      - key: ADMIN_JWT_SECRET
+        generateValue: true
+      - key: ADMIN_SESSION_SECRET
+        generateValue: true
+      - key: BLOG_REBUILD_TOKEN
+        generateValue: true
+      - key: BLOG_SITE_URL
+        fromService:
+          type: web
+          name: mad2moi-blog
+          envVarKey: RENDER_EXTERNAL_URL
+
+  # Main Blog Application
+  - type: web
+    name: mad2moi-blog
+    env: node
+    plan: free
+    buildCommand: cd blog && npm install && npm run build
+    startCommand: cd blog && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_DRIVER
+        value: mongodb
+      - key: MONGO_URI
+        sync: false  # Set this manually in Render dashboard
+      - key: MONGO_DB_NAME
+        value: mad2moi_blog
+      - key: BLOG_SITE_NAME
+        value: Mad2Moi Blog
+      - key: BLOG_SITE_DESCRIPTION
+        value: Your trusted source for adult education and exploration
+
