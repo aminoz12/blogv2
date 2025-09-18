@@ -100,34 +100,44 @@ export async function GET({ params, request }) {
     console.log('🔍 Blog Image API: Looking for image file:', filename);
     
     // Construct the file path - point to the shared uploads directory
-    const uploadsDir = path.join(__dirname, '../../../../../../danialblogs-chat_work/adminblog/public/uploads');
-    const filePath = path.join(uploadsDir, filename);
+    // In deployed environment, both services share the same file system
+    const possiblePaths = [
+      // Render deployment - both services in same parent directory
+      path.join(__dirname, '../../../../../../adminblog/public/uploads', filename),
+      // Local development - different structure
+      path.join(__dirname, '../../../../../../danialblogs-chat_work/adminblog/public/uploads', filename),
+      // Alternative Render structure
+      path.join(process.cwd(), '../adminblog/public/uploads', filename),
+      // Direct relative path
+      path.join(process.cwd(), '../../adminblog/public/uploads', filename)
+    ];
     
-    console.log('🔍 Blog Image API: Attempting to access file at:', filePath);
+    let filePath = null;
+    let fileExists = false;
     
-    // Check if file exists with enhanced error handling
-    try {
-      const stats = await fs.stat(filePath);
-      if (!stats.isFile()) {
-        console.error('❌ Blog Image API: Path exists but is not a file:', filePath);
-        return new Response(JSON.stringify({ 
-          error: 'Invalid file',
-          message: 'Path does not point to a valid file'
-        }), { 
-          status: 404,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
-        });
+    // Check each possible path
+    for (const testPath of possiblePaths) {
+      try {
+        await fs.access(testPath);
+        filePath = testPath;
+        fileExists = true;
+        console.log('📁 Blog Image API: Found image at:', filePath);
+        break;
+      } catch (error) {
+        // File doesn't exist at this path, try next
+        continue;
       }
-    } catch (accessError) {
-      console.error('❌ Blog Image API: File not found:', filePath, 'Error:', accessError.message);
+    }
+    
+    if (!fileExists) {
+      console.error('❌ Blog Image API: Image not found at any path for filename:', filename);
+      console.error('❌ Blog Image API: Tried paths:', possiblePaths);
       return new Response(JSON.stringify({ 
         error: 'Image not found',
         message: `File ${filename} does not exist in uploads directory`,
         filename: filename,
-        requestPath: requestUrl.pathname
+        requestPath: requestUrl.pathname,
+        triedPaths: possiblePaths
       }), { 
         status: 404,
         headers: {
