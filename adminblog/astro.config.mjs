@@ -4,7 +4,7 @@ import tailwind from '@astrojs/tailwind';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://mad2moi.store/admin',
+  site: 'https://admin.mad2moi.store',
   integrations: [tailwind()],
   output: 'server',
   adapter: node({
