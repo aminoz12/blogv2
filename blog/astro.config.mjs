@@ -7,7 +7,7 @@ import node from '@astrojs/node';
 
 
 export default defineConfig({
-  site: '',
+  site: 'https://mad2moi.store/blog',
   output: 'server', //  
   adapter: node({
     mode: 'standalone'

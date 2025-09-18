@@ -92,5 +92,3 @@ jspm_packages/
 tmp/
 temp/
 
-# Astro
-.astro/
