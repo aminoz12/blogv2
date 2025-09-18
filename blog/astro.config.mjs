@@ -1,14 +1,13 @@
-
 import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import node from '@astrojs/node';
-
+import path from 'path';
 
 export default defineConfig({
-  site: 'https://blog.mad2moi.store',
-  output: 'server', //  
+  site: 'https://mad2moi.store/blog',
+  output: 'server',
   adapter: node({
     mode: 'standalone'
   }),
@@ -31,6 +30,11 @@ export default defineConfig({
     format: 'file'
   },
   vite: {
+    resolve: {
+      alias: {
+        '~': path.resolve(__dirname, './src')
+      }
+    },
     optimizeDeps: {
       include: ['openai']
     }
