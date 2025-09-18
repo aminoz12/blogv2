@@ -35,7 +35,7 @@ services:
     env: node
     plan: free
     buildCommand: cd blog && npm install && npm run build
-    startCommand: cd blog && npm start
+    startCommand: cd blog && node dist/server/entry.mjs
     envVars:
       - key: NODE_ENV
         value: production
