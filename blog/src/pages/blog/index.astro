@@ -53,7 +53,7 @@ try {
           if (!article.featured_image) return null;
           
           console.log('🔍 Processing image for:', article.title);
-          console.log('🔍 Raw data:', article.featured_image.substring(0, 100) + '...');
+          console.log('🔍 Raw data:', typeof article.featured_image === 'string' ? article.featured_image.substring(0, 100) + '...' : article.featured_image);
           
           // Handle different image formats
           if (typeof article.featured_image === 'string') {
@@ -104,11 +104,34 @@ try {
                     return convertedUrl;
                   }
                 }
+                // Handle deployed admin URLs
+                else if (imageUrl.includes('mad2moi-admin') || imageUrl.includes('mad2moi.store/admin')) {
+                  const match = imageUrl.match(/\/uploads\/(.+)$/);
+                  if (match) {
+                    const convertedUrl = `/api/uploads/${match[1]}`;
+                    console.log('🔄 Converted deployed admin URL to blog API:', convertedUrl);
+                    return convertedUrl;
+                  }
+                }
                 // Handle relative /uploads/ URLs
                 else if (imageUrl.startsWith('/uploads/')) {
                   const convertedUrl = `/api/uploads${imageUrl}`;
                   console.log('🔄 Converted relative URL to blog API:', convertedUrl);
                   return convertedUrl;
+                }
+                // Handle absolute URLs
+                else if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+                  // If it's pointing to the admin service, convert it
+                  if (imageUrl.includes('mad2moi-admin') || imageUrl.includes('mad2moi.store/admin')) {
+                    const match = imageUrl.match(/\/uploads\/(.+)$/);
+                    if (match) {
+                      const convertedUrl = `/api/uploads/${match[1]}`;
+                      console.log('🔄 Converted deployed admin URL to blog API:', convertedUrl);
+                      return convertedUrl;
+                    }
+                  }
+                  // For other absolute URLs, use as-is
+                  return imageUrl;
                 }
                 
                 // Return as-is if it's already a valid URL
@@ -120,19 +143,12 @@ try {
             } catch (parseError) {
               console.log('🔍 Not JSON, checking as raw string');
               
-              // If not JSON, check if it's a direct URL
-              if (article.featured_image.startsWith('http://') || 
-                  article.featured_image.startsWith('https://') ||
-                  article.featured_image.startsWith('data:image/')) {
-                console.log('🔍 Direct URL found:', article.featured_image);
-                return article.featured_image;
-              }
-              
-              // Try as relative URL from admin
+              // Handle URLs that are already in blog API format
               if (article.featured_image.startsWith('/api/uploads/')) {
                 console.log('🔄 String URL already in blog API format:', article.featured_image);
                 return article.featured_image;
               }
+              // Handle admin localhost URLs
               else if (article.featured_image.includes('localhost:4322') || article.featured_image.includes('localhost:4323')) {
                 const match = article.featured_image.match(/\/uploads\/(.+)$/);
                 if (match) {
@@ -141,10 +157,39 @@ try {
                   return convertedUrl;
                 }
               }
+              // Handle deployed admin URLs
+              else if (article.featured_image.includes('mad2moi-admin') || article.featured_image.includes('mad2moi.store/admin')) {
+                const match = article.featured_image.match(/\/uploads\/(.+)$/);
+                if (match) {
+                  const convertedUrl = `/api/uploads/${match[1]}`;
+                  console.log('🔄 Converted deployed admin URL string to blog API:', convertedUrl);
+                  return convertedUrl;
+                }
+              }
+              // Handle relative /uploads/ URLs
               else if (article.featured_image.startsWith('/uploads/')) {
                 const convertedUrl = `/api/uploads${article.featured_image}`;
                 console.log('🔄 Converted relative URL string to blog API:', convertedUrl);
                 return convertedUrl;
+              }
+              // Handle absolute URLs
+              else if (article.featured_image.startsWith('http://') || article.featured_image.startsWith('https://')) {
+                // If it's pointing to the admin service, convert it
+                if (article.featured_image.includes('mad2moi-admin') || article.featured_image.includes('mad2moi.store/admin')) {
+                  const match = article.featured_image.match(/\/uploads\/(.+)$/);
+                  if (match) {
+                    const convertedUrl = `/api/uploads/${match[1]}`;
+                    console.log('🔄 Converted deployed admin URL to blog API:', convertedUrl);
+                    return convertedUrl;
+                  }
+                }
+                // For other absolute URLs, use as-is
+                return article.featured_image;
+              }
+              // Handle data URLs
+              else if (article.featured_image.startsWith('data:image/')) {
+                console.log('🔍 Direct data URL found');
+                return article.featured_image;
               }
               
               console.warn('⚠️ Unrecognized image format for', article.title, ':', article.featured_image.substring(0, 100));
