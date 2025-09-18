@@ -1,8 +1,8 @@
 ---
-import Layout from '~/layouts/Layout.astro';
-import LiveChat from '~/components/common/LiveChat.astro';
-import { getPublishedArticles, getCategories, initializeDatabase } from '~/utils/database.js';
-import CategoryBadge from '~/components/CategoryBadge.astro';
+import Layout from '../layouts/Layout.astro';
+import LiveChat from '../components/common/LiveChat.astro';
+import { getPublishedArticles, getCategories, initializeDatabase } from '../utils/database.js';
+import CategoryBadge from '../components/CategoryBadge.astro';
 
 // Initialize database connection
 await initializeDatabase();
