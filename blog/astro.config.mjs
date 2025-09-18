@@ -3,7 +3,12 @@ import tailwind from '@astrojs/tailwind';
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import node from '@astrojs/node';
-import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// Create __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default defineConfig({
   site: 'https://mad2moi.store/blog',
@@ -32,7 +37,7 @@ export default defineConfig({
   vite: {
     resolve: {
       alias: {
-        '~': path.resolve(__dirname, './src')
+        '~': dirname(__filename) + '/src'
       }
     },
     optimizeDeps: {
