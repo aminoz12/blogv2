@@ -121,32 +121,17 @@ import JoinMad2MoiCTA from '../components/common/JoinMad2MoiCTA.astro';
           <h2 class="text-2xl font-bold text-white mb-6 font-elegant" data-translate="Envoyez-nous un Message">Envoyez-nous un Message</h2>
           
           <form class="space-y-6" id="contact-form">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label for="firstName" class="block text-white font-medium mb-2" data-translate="Prénom *">Prénom *</label>
-                <input
-                  type="text"
-                  id="firstName"
-                  name="firstName"
-                  required
-                  class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-white placeholder-white/60 backdrop-blur-sm transition-all duration-200"
-                  placeholder="Votre prénom"
-                  data-translate="Votre prénom"
-                />
-              </div>
-              
-              <div>
-                <label for="lastName" class="block text-white font-medium mb-2" data-translate="Nom *">Nom *</label>
-                <input
-                  type="text"
-                  id="lastName"
-                  name="lastName"
-                  required
-                  class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-white placeholder-white/60 backdrop-blur-sm transition-all duration-200"
-                  placeholder="Votre nom"
-                  data-translate="Votre nom"
-                />
-              </div>
+            <div>
+              <label for="firstName" class="block text-white font-medium mb-2" data-translate="Prénom *">Prénom *</label>
+              <input
+                type="text"
+                id="firstName"
+                name="firstName"
+                required
+                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-white placeholder-white/60 backdrop-blur-sm transition-all duration-200"
+                placeholder="Votre prénom"
+                data-translate="Votre prénom"
+              />
             </div>
             
             <div>
@@ -159,6 +144,19 @@ import JoinMad2MoiCTA from '../components/common/JoinMad2MoiCTA.astro';
                 class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-white placeholder-white/60 backdrop-blur-sm transition-all duration-200"
                 placeholder="votre.email@exemple.com"
                 data-translate="votre.email@exemple.com"
+                pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+              />
+            </div>
+            
+            <div>
+              <label for="phone" class="block text-white font-medium mb-2" data-translate="Téléphone (optionnel)">Téléphone (optionnel)</label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-white placeholder-white/60 backdrop-blur-sm transition-all duration-200"
+                placeholder="+33 6 12 34 56 78"
+                data-translate="+33 6 12 34 56 78"
               />
             </div>
             
@@ -339,6 +337,52 @@ import JoinMad2MoiCTA from '../components/common/JoinMad2MoiCTA.astro';
         const formData = new FormData(e.target as HTMLFormElement);
         const formDataObj = Object.fromEntries(formData.entries());
         
+        // Log form data for debugging
+        console.log('Form data being sent:', formDataObj);
+        
+        // Client-side validation
+        let missingFields = [];
+        if (!formDataObj.firstName) {
+          missingFields.push('Prénom');
+        }
+        if (!formDataObj.email) {
+          missingFields.push('Email');
+        }
+        if (!formDataObj.subject || formDataObj.subject === '') {
+          missingFields.push('Sujet');
+        }
+        if (!formDataObj.message) {
+          missingFields.push('Message');
+        }
+        if (!formDataObj.privacy) {
+          missingFields.push('Acceptation de la politique de confidentialité');
+        }
+        if (!formDataObj.age) {
+          missingFields.push('Confirmation d\'âge');
+        }
+        
+        if (missingFields.length > 0) {
+          alert('Veuillez remplir les champs suivants : ' + missingFields.join(', '));
+          return;
+        }
+        
+        // Validate email format (additional validation)
+        const emailRegex = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
+        if (!emailRegex.test(formDataObj.email)) {
+          alert('Veuillez entrer une adresse email valide.');
+          return;
+        }
+        
+        // Validate phone number format if provided
+        if (formDataObj.phone && formDataObj.phone.trim() !== '') {
+          // Basic phone number validation (allows various formats)
+          const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,20}$/;
+          if (!phoneRegex.test(formDataObj.phone)) {
+            alert('Veuillez entrer un numéro de téléphone valide (optionnel).');
+            return;
+          }
+        }
+        
         try {
           const response = await fetch('/api/contact', {
             method: 'POST',
@@ -352,7 +396,9 @@ import JoinMad2MoiCTA from '../components/common/JoinMad2MoiCTA.astro';
             alert('Merci pour votre message ! Nous vous répondrons dans les plus brefs délais.');
             (e.target as HTMLFormElement).reset();
           } else {
-            alert('Une erreur est survenue lors de l\'envoi. Veuillez réessayer.');
+            const errorData = await response.json();
+            console.error('Server error response:', errorData);
+            alert('Une erreur est survenue lors de l\'envoi. Veuillez réessayer. Error: ' + (errorData.error || 'Unknown error'));
           }
         } catch (error) {
           console.error('Contact form error:', error);
