@@ -14,8 +14,8 @@ console.log('🔧 MongoDB Config Debug:');
 console.log('MONGO_URI from env:', process.env.MONGO_URI);
 console.log('MONGO_DB_NAME from env:', process.env.MONGO_DB_NAME);
 
-// Use MongoDB Atlas connection string - Force new cluster
-const MONGODB_URI = 'mongodb+srv://sam91bel_db_user:admin123@cluster0.rd9igzt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+// Use MongoDB Atlas connection string - Use same cluster as blog
+const MONGODB_URI = 'mongodb+srv://blog:admin123@cluster0.5lryebj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 const DB_NAME = process.env.MONGO_DB_NAME || 'mad2moi_blog';
 
 let client;

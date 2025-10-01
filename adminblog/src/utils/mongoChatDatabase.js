@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../../../config.env') });
 
 // MongoDB Atlas configuration for chat - Force new cluster
-const MONGODB_URI = 'mongodb+srv://sam91bel_db_user:admin123@cluster0.rd9igzt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URI = 'mongodb+srv://blog:admin123@cluster0.5lryebj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 const DB_NAME = process.env.MONGO_DB_NAME || 'mad2moi_blog';
 
 let client = null;

@@ -65,7 +65,7 @@ export async function GET({ request }) {
       try {
         await initializeChatDatabase();
         const { MongoClient } = await import('mongodb');
-        const client = new MongoClient('mongodb+srv://sam91bel_db_user:admin123@cluster0.rd9igzt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0');
+        const client = new MongoClient('mongodb+srv://blog:admin123@cluster0.5lryebj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0');
         await client.connect();
         const db = client.db(process.env.MONGO_DB_NAME || 'mad2moi_blog');
         const settingsCollection = db.collection('admin_settings');
@@ -195,7 +195,7 @@ export async function POST({ request }) {
       try {
         await initializeChatDatabase();
         const { MongoClient } = await import('mongodb');
-        const client = new MongoClient('mongodb+srv://sam91bel_db_user:admin123@cluster0.rd9igzt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0');
+        const client = new MongoClient('mongodb+srv://blog:admin123@cluster0.5lryebj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0');
         await client.connect();
         const db = client.db(process.env.MONGO_DB_NAME || 'mad2moi_blog');
         const settingsCollection = db.collection('admin_settings');
