@@ -13,9 +13,17 @@ let blogPosts = [];
 let categories = [];
 
 try {
-  // Get published articles from database
+  // Get published articles from database with timeout
   console.log('🔍 Debug: Trying to fetch published articles...');
-  blogPosts = await getPublishedArticles();
+  
+  const fetchWithTimeout = async (promise, timeoutMs = 10000) => {
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database query timeout')), timeoutMs)
+    );
+    return Promise.race([promise, timeoutPromise]);
+  };
+  
+  blogPosts = await fetchWithTimeout(getPublishedArticles());
   console.log('🔍 Debug: Articles fetched:', blogPosts.length);
   
   if (blogPosts.length === 0) {
@@ -53,153 +61,40 @@ try {
           if (!article.featured_image) return null;
           
           console.log('🔍 Processing image for:', article.title);
-          console.log('🔍 Raw data:', typeof article.featured_image === 'string' ? article.featured_image.substring(0, 100) + '...' : article.featured_image);
           
-          // Handle different image formats
+          let imageUrl = null;
+          
+          // Handle JSON format
           if (typeof article.featured_image === 'string') {
-            // Try parsing as JSON first
             try {
               const parsed = JSON.parse(article.featured_image);
-              console.log('🔍 Parsed JSON successfully');
-              
-              let imageUrl = null;
-              
-              // Check for url property
-              if (parsed?.url) {
-                imageUrl = parsed.url;
-                console.log('🔍 Found url property:', imageUrl);
-                
-                // Handle case where url is a JSON string instead of a simple string
-                if (typeof imageUrl === 'string' && imageUrl.startsWith('{')) {
-                  try {
-                    const urlData = JSON.parse(imageUrl);
-                    imageUrl = urlData.url || imageUrl;
-                    console.log('🔍 Extracted from nested JSON:', imageUrl);
-                  } catch (e) {
-                    console.warn('⚠️ Could not parse URL JSON:', e.message);
-                  }
-                }
-              }
-              
-              // Check for src property if no url
-              if (!imageUrl && parsed?.src) {
-                imageUrl = parsed.src;
-                console.log('🔍 Found src property:', imageUrl);
-              }
-              
-              // Convert URLs to blog API format
-              if (imageUrl) {
-                // Handle URLs that are already in blog API format
-                if (imageUrl.startsWith('/api/uploads/')) {
-                  console.log('🔄 Image URL already in blog API format:', imageUrl);
-                  return imageUrl;
-                }
-                // Handle admin localhost URLs
-                else if (imageUrl.includes('localhost:4322') || imageUrl.includes('localhost:4323')) {
-                  // Extract just the filename from admin URLs
-                  const match = imageUrl.match(/\/uploads\/(.+)$/);
-                  if (match) {
-                    const convertedUrl = `/api/uploads/${match[1]}`;
-                    console.log('🔄 Converted admin URL to blog API:', convertedUrl);
-                    return convertedUrl;
-                  }
-                }
-                // Handle deployed admin URLs
-                else if (imageUrl.includes('mad2moi-admin') || imageUrl.includes('mad2moi.store/admin')) {
-                  const match = imageUrl.match(/\/uploads\/(.+)$/);
-                  if (match) {
-                    const convertedUrl = `/api/uploads/${match[1]}`;
-                    console.log('🔄 Converted deployed admin URL to blog API:', convertedUrl);
-                    return convertedUrl;
-                  }
-                }
-                // Handle relative /uploads/ URLs
-                else if (imageUrl.startsWith('/uploads/')) {
-                  const convertedUrl = `/api/uploads${imageUrl}`;
-                  console.log('🔄 Converted relative URL to blog API:', convertedUrl);
-                  return convertedUrl;
-                }
-                // Handle absolute URLs
-                else if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-                  // If it's pointing to the admin service, convert it
-                  if (imageUrl.includes('mad2moi-admin') || imageUrl.includes('mad2moi.store/admin')) {
-                    const match = imageUrl.match(/\/uploads\/(.+)$/);
-                    if (match) {
-                      const convertedUrl = `/api/uploads/${match[1]}`;
-                      console.log('🔄 Converted deployed admin URL to blog API:', convertedUrl);
-                      return convertedUrl;
-                    }
-                  }
-                  // For other absolute URLs, use as-is
-                  return imageUrl;
-                }
-                
-                // Return as-is if it's already a valid URL
-                return imageUrl;
-              }
-              
-              return imageUrl;
-              
+              imageUrl = parsed?.url || parsed?.src;
             } catch (parseError) {
-              console.log('🔍 Not JSON, checking as raw string');
-              
-              // Handle URLs that are already in blog API format
-              if (article.featured_image.startsWith('/api/uploads/')) {
-                console.log('🔄 String URL already in blog API format:', article.featured_image);
-                return article.featured_image;
-              }
-              // Handle admin localhost URLs
-              else if (article.featured_image.includes('localhost:4322') || article.featured_image.includes('localhost:4323')) {
-                const match = article.featured_image.match(/\/uploads\/(.+)$/);
-                if (match) {
-                  const convertedUrl = `/api/uploads/${match[1]}`;
-                  console.log('🔄 Converted admin URL string to blog API:', convertedUrl);
-                  return convertedUrl;
-                }
-              }
-              // Handle deployed admin URLs
-              else if (article.featured_image.includes('mad2moi-admin') || article.featured_image.includes('mad2moi.store/admin')) {
-                const match = article.featured_image.match(/\/uploads\/(.+)$/);
-                if (match) {
-                  const convertedUrl = `/api/uploads/${match[1]}`;
-                  console.log('🔄 Converted deployed admin URL string to blog API:', convertedUrl);
-                  return convertedUrl;
-                }
-              }
-              // Handle relative /uploads/ URLs
-              else if (article.featured_image.startsWith('/uploads/')) {
-                const convertedUrl = `/api/uploads${article.featured_image}`;
-                console.log('🔄 Converted relative URL string to blog API:', convertedUrl);
-                return convertedUrl;
-              }
-              // Handle absolute URLs
-              else if (article.featured_image.startsWith('http://') || article.featured_image.startsWith('https://')) {
-                // If it's pointing to the admin service, convert it
-                if (article.featured_image.includes('mad2moi-admin') || article.featured_image.includes('mad2moi.store/admin')) {
-                  const match = article.featured_image.match(/\/uploads\/(.+)$/);
-                  if (match) {
-                    const convertedUrl = `/api/uploads/${match[1]}`;
-                    console.log('🔄 Converted deployed admin URL to blog API:', convertedUrl);
-                    return convertedUrl;
-                  }
-                }
-                // For other absolute URLs, use as-is
-                return article.featured_image;
-              }
-              // Handle data URLs
-              else if (article.featured_image.startsWith('data:image/')) {
-                console.log('🔍 Direct data URL found');
-                return article.featured_image;
-              }
-              
-              console.warn('⚠️ Unrecognized image format for', article.title, ':', article.featured_image.substring(0, 100));
-              return null;
+              // Not JSON, treat as direct URL
+              imageUrl = article.featured_image;
             }
+          }
+          
+          if (!imageUrl) return null;
+          
+          // Convert to blog API format
+          if (imageUrl.startsWith('/api/uploads/')) {
+            return imageUrl; // Already correct format
+          } else if (imageUrl.includes('/uploads/')) {
+            // Extract filename from any URL containing /uploads/
+            const match = imageUrl.match(/\/uploads\/(.+)$/);
+            if (match) {
+              return `/api/uploads/${match[1]}`;
+            }
+          } else if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+            return imageUrl; // External URL, use as-is
+          } else if (imageUrl.startsWith('data:image/')) {
+            return imageUrl; // Data URL, use as-is
           }
           
           return null;
         } catch (error) {
-          console.error('❌ Error processing featured_image for', article.title, ':', error);
+          console.error('❌ Error processing image for', article.title, ':', error);
           return null;
         }
       })(),
@@ -223,8 +118,8 @@ try {
     return transformed;
   });
   
-  // Get categories from database
-  categories = await getCategories();
+  // Get categories from database with timeout
+  categories = await fetchWithTimeout(getCategories());
   
   console.log('🔍 Debug: Articles loaded:', blogPosts.length);
   console.log('🔍 Debug: Categories loaded:', categories.length);
