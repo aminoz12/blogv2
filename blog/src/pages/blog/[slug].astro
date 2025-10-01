@@ -576,7 +576,7 @@ const pageDescription = article?.meta_description || article?.excerpt || 'Décou
         
         <!-- Comments Section -->
         <div class="mt-12">
-          <CommentSection articleId={article?.id} />
+          <CommentSection postSlug={article?.slug} postTitle={article?.title} />
         </div>
       </div>
     </div>
