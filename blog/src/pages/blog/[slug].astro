@@ -333,9 +333,9 @@ const formattedDate = publishedDate.toLocaleDateString('fr-FR', {
 // Helper function to calculate read time
 function calculateReadTime(content) {
   if (!content) return '1 min';
-  const wordsPerMinute = 200;
+  const wordsPerMinute = 300; // Increased from 200 to 300
   const wordCount = content.split(/\s+/).length;
-  const readTime = Math.ceil(wordCount / wordsPerMinute);
+  const readTime = Math.min(Math.ceil(wordCount / wordsPerMinute), 5); // Cap at 5 minutes max
   return `${readTime} min`;
 }
 

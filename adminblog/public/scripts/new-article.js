@@ -46,7 +46,12 @@ function loadArticleForEditing(articleId) {
 
     // Fill form fields
     document.getElementById('title').value = editingArticle.title || '';
-    document.getElementById('content').value = editingArticle.content || '';
+    // Set content in rich text editor or textarea
+    if (window.simpleRichTextEditor) {
+      window.simpleRichTextEditor.setContent(editingArticle.content || '');
+    } else {
+      document.getElementById('content').value = editingArticle.content || '';
+    }
     document.getElementById('excerpt').value = editingArticle.excerpt || '';
     document.getElementById('publishDate').value = editingArticle.publishDate || today;
     document.getElementById('featured').checked = editingArticle.featured || false;
@@ -241,6 +246,9 @@ document.addEventListener('DOMContentLoaded', () => {
   loadUserCategories();
   initializeCategoryModal();
   checkEditMode(); // Check if we're editing
+  
+  // Initialize Simple Rich Text Editor
+  initializeSimpleRichTextEditor();
   
   // Add event listeners for action buttons
   const previewBtn = document.getElementById('previewBtn');
@@ -823,7 +831,13 @@ function cleanLocalStorage() {
 // Handle form submission
 async function handleSubmit(status) {
   const title = document.getElementById('title').value.trim();
-  const content = document.getElementById('content').value.trim();
+  // Get content from rich text editor or textarea
+  let content;
+  if (window.simpleRichTextEditor) {
+    content = window.simpleRichTextEditor.getContent().trim();
+  } else {
+    content = document.getElementById('content').value.trim();
+  }
   const category = document.getElementById('category').value;
   const featuredImage = document.getElementById('featuredImage').files[0];
   
@@ -1076,6 +1090,670 @@ async function handleSubmit(status) {
   }
 }
 
+// Initialize Simple Rich Text Editor
+function initializeSimpleRichTextEditor() {
+  try {
+    const container = document.getElementById('rich-text-editor');
+    if (!container) {
+      console.error('Rich text editor container not found');
+      return;
+    }
+    
+    // Create toolbar
+    const toolbar = document.createElement('div');
+    toolbar.className = 'rich-text-toolbar';
+    toolbar.style.cssText = `
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 12px 16px;
+      background-color: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      gap: 8px;
+      min-height: 60px;
+    `;
+    
+    // Apply dark mode to toolbar
+    const applyToolbarDarkMode = () => {
+      const isDarkMode = document.documentElement.classList.contains('dark') ||
+                        document.body.classList.contains('dark') ||
+                        document.documentElement.getAttribute('data-theme') === 'dark' ||
+                        document.body.getAttribute('data-theme') === 'dark';
+      
+      if (isDarkMode) {
+        toolbar.style.backgroundColor = '#1f2937';
+        toolbar.style.borderBottom = '1px solid #374151';
+      } else {
+        toolbar.style.backgroundColor = '#f9fafb';
+        toolbar.style.borderBottom = '1px solid #e5e7eb';
+      }
+    };
+    
+    // Apply initial toolbar dark mode
+    applyToolbarDarkMode();
+    
+    // Watch for dark mode changes on toolbar
+    const toolbarObserver = new MutationObserver(() => {
+      applyToolbarDarkMode();
+    });
+    toolbarObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+    toolbarObserver.observe(document.body, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+    
+    // Format buttons
+    const buttons = [
+      { command: 'bold', icon: 'B', title: 'Gras' },
+      { command: 'italic', icon: 'I', title: 'Italique' },
+      { command: 'underline', icon: 'U', title: 'Souligné' },
+      { command: 'strikeThrough', icon: 'S', title: 'Barré' },
+      { command: 'superscript', icon: 'x²', title: 'Exposant' },
+      { command: 'subscript', icon: 'x₂', title: 'Indice' },
+      { command: 'justifyLeft', icon: '⬅', title: 'Gauche' },
+      { command: 'justifyCenter', icon: '↔', title: 'Centre' },
+      { command: 'justifyRight', icon: '➡', title: 'Droite' },
+      { command: 'justifyFull', icon: '⬌', title: 'Justifier' },
+      { command: 'insertUnorderedList', icon: '•', title: 'Liste' },
+      { command: 'insertOrderedList', icon: '1.', title: 'Numérotée' },
+      { command: 'outdent', icon: '⬅', title: 'Diminuer l\'indentation' },
+      { command: 'indent', icon: '➡', title: 'Augmenter l\'indentation' },
+      { command: 'createLink', icon: '🔗', title: 'Insérer un lien' },
+      { command: 'insertHorizontalRule', icon: '—', title: 'Ligne horizontale' }
+    ];
+    
+    buttons.forEach(btn => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'rich-text-btn';
+      button.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        color: #374151;
+      `;
+      button.innerHTML = btn.icon;
+      button.title = btn.title;
+      button.onclick = () => executeCommand(btn.command);
+      toolbar.appendChild(button);
+    });
+    
+    // Add separator
+    const separator1 = document.createElement('div');
+    separator1.style.cssText = `
+      width: 1px;
+      height: 24px;
+      background-color: #d1d5db;
+      margin: 0 8px;
+    `;
+    toolbar.appendChild(separator1);
+    
+    // Font family dropdown
+    const fontSelect = document.createElement('select');
+    fontSelect.className = 'rich-text-select';
+    fontSelect.style.cssText = `
+      padding: 6px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+      color: #374151;
+      min-width: 120px;
+    `;
+    fontSelect.innerHTML = `
+      <option value="">Police par défaut</option>
+      <option value="Arial">Arial</option>
+      <option value="Helvetica">Helvetica</option>
+      <option value="Times New Roman">Times New Roman</option>
+      <option value="Georgia">Georgia</option>
+      <option value="Verdana">Verdana</option>
+      <option value="Courier New">Courier New</option>
+    `;
+    fontSelect.onchange = () => executeCommand('fontName', fontSelect.value);
+    toolbar.appendChild(fontSelect);
+    
+    // Font size dropdown
+    const sizeSelect = document.createElement('select');
+    sizeSelect.className = 'rich-text-select';
+    sizeSelect.style.cssText = `
+      padding: 6px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+      color: #374151;
+      min-width: 80px;
+    `;
+    sizeSelect.innerHTML = `
+      <option value="">Taille</option>
+      <option value="8px">8px</option>
+      <option value="9px">9px</option>
+      <option value="10px">10px</option>
+      <option value="11px">11px</option>
+      <option value="12px">12px</option>
+      <option value="14px">14px</option>
+      <option value="16px">16px</option>
+      <option value="18px">18px</option>
+      <option value="20px">20px</option>
+      <option value="24px">24px</option>
+      <option value="28px">28px</option>
+      <option value="32px">32px</option>
+      <option value="36px">36px</option>
+      <option value="48px">48px</option>
+    `;
+    sizeSelect.onchange = () => executeCommand('fontSize', sizeSelect.value);
+    toolbar.appendChild(sizeSelect);
+    
+    // Add separator
+    const separator2 = document.createElement('div');
+    separator2.style.cssText = `
+      width: 1px;
+      height: 24px;
+      background-color: #d1d5db;
+      margin: 0 8px;
+    `;
+    toolbar.appendChild(separator2);
+    
+    // Color picker
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.style.cssText = `
+      width: 36px;
+      height: 36px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #000000;
+    `;
+    colorInput.title = 'Couleur du texte';
+    colorInput.value = '#000000';
+    colorInput.onchange = () => executeCommand('foreColor', colorInput.value);
+    toolbar.appendChild(colorInput);
+    
+    // Background color picker
+    const bgColorInput = document.createElement('input');
+    bgColorInput.type = 'color';
+    bgColorInput.style.cssText = `
+      width: 36px;
+      height: 36px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #ffffff;
+    `;
+    bgColorInput.title = 'Couleur de fond';
+    bgColorInput.value = '#ffffff';
+    bgColorInput.onchange = () => executeCommand('backColor', bgColorInput.value);
+    toolbar.appendChild(bgColorInput);
+    
+    // Add separator
+    const separator3 = document.createElement('div');
+    separator3.style.cssText = `
+      width: 1px;
+      height: 24px;
+      background-color: #d1d5db;
+      margin: 0 8px;
+    `;
+    toolbar.appendChild(separator3);
+    
+    // Headers dropdown
+    const headerSelect = document.createElement('select');
+    headerSelect.className = 'rich-text-select';
+    headerSelect.style.cssText = `
+      padding: 6px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+      color: #374151;
+      min-width: 100px;
+    `;
+    headerSelect.innerHTML = `
+      <option value="">Format</option>
+      <option value="h1">Titre 1</option>
+      <option value="h2">Titre 2</option>
+      <option value="h3">Titre 3</option>
+      <option value="h4">Titre 4</option>
+      <option value="h5">Titre 5</option>
+      <option value="h6">Titre 6</option>
+      <option value="p">Paragraphe</option>
+      <option value="blockquote">Citation</option>
+      <option value="pre">Code</option>
+    `;
+    headerSelect.onchange = () => executeCommand('formatBlock', headerSelect.value);
+    toolbar.appendChild(headerSelect);
+    
+    // Table and layout buttons
+    const tableButtons = [
+      { command: 'insertTable', icon: '⊞', title: 'Insérer un tableau' },
+      { command: 'insertTableRow', icon: '⤴', title: 'Ajouter une ligne' },
+      { command: 'insertTableColumn', icon: '⤵', title: 'Ajouter une colonne' },
+      { command: 'deleteTableRow', icon: '🗑️', title: 'Supprimer la ligne' },
+      { command: 'deleteTableColumn', icon: '🗑️', title: 'Supprimer la colonne' },
+      { command: 'insertDiv', icon: '▦', title: 'Insérer un conteneur' },
+      { command: 'insertSpan', icon: '📦', title: 'Insérer un span' }
+    ];
+    
+    tableButtons.forEach(btn => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'rich-text-btn';
+      button.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        color: #374151;
+      `;
+      button.innerHTML = btn.icon;
+      button.title = btn.title;
+      button.onclick = () => executeCustomCommand(btn.command);
+      toolbar.appendChild(button);
+    });
+    
+    // Add separator
+    const separator4 = document.createElement('div');
+    separator4.style.cssText = `
+      width: 1px;
+      height: 24px;
+      background-color: #d1d5db;
+      margin: 0 8px;
+    `;
+    toolbar.appendChild(separator4);
+    
+    // Numbering styles dropdown
+    const numberingSelect = document.createElement('select');
+    numberingSelect.className = 'rich-text-select';
+    numberingSelect.style.cssText = `
+      padding: 6px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+      color: #374151;
+      min-width: 120px;
+    `;
+    numberingSelect.innerHTML = `
+      <option value="">Numérotation</option>
+      <option value="decimal">1. 2. 3. (Décimal)</option>
+      <option value="lower-alpha">a. b. c. (Alphabétique)</option>
+      <option value="upper-alpha">A. B. C. (Majuscules)</option>
+      <option value="lower-roman">i. ii. iii. (Romain minuscule)</option>
+      <option value="upper-roman">I. II. III. (Romain majuscule)</option>
+      <option value="disc">• (Puces)</option>
+      <option value="circle">○ (Cercles)</option>
+      <option value="square">■ (Carrés)</option>
+    `;
+    numberingSelect.onchange = () => applyNumberingStyle(numberingSelect.value);
+    toolbar.appendChild(numberingSelect);
+    
+    // Special formatting buttons
+    const specialButtons = [
+      { command: 'removeFormat', icon: '🧹', title: 'Effacer le formatage' },
+      { command: 'undo', icon: '↶', title: 'Annuler' },
+      { command: 'redo', icon: '↷', title: 'Refaire' },
+      { command: 'selectAll', icon: '☰', title: 'Tout sélectionner' },
+      { command: 'copy', icon: '📋', title: 'Copier' },
+      { command: 'cut', icon: '✂️', title: 'Couper' },
+      { command: 'paste', icon: '📄', title: 'Coller' }
+    ];
+    
+    specialButtons.forEach(btn => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'rich-text-btn';
+      button.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        color: #374151;
+      `;
+      button.innerHTML = btn.icon;
+      button.title = btn.title;
+      button.onclick = () => executeCommand(btn.command);
+      toolbar.appendChild(button);
+    });
+    
+    // Create content area
+    const contentArea = document.createElement('div');
+    contentArea.className = 'rich-text-content';
+    contentArea.contentEditable = true;
+    contentArea.style.cssText = `
+      min-height: 500px;
+      padding: 20px;
+      outline: none;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #374151;
+      overflow-y: auto;
+      background-color: #ffffff;
+    `;
+    contentArea.innerHTML = '<p style="color: #9ca3af; font-style: italic; margin: 0;">Commencez à taper votre article ici... Vous pouvez utiliser tous les outils de formatage disponibles dans la barre d\'outils ci-dessus.</p>';
+    
+    // Apply dark mode styling
+    const applyDarkMode = () => {
+      const isDarkMode = document.documentElement.classList.contains('dark') ||
+                        document.body.classList.contains('dark') ||
+                        document.documentElement.getAttribute('data-theme') === 'dark' ||
+                        document.body.getAttribute('data-theme') === 'dark';
+      
+      if (isDarkMode) {
+        contentArea.style.backgroundColor = '#1f2937';
+        contentArea.style.color = '#ffffff';
+        contentArea.innerHTML = '<p style="color: #9ca3af; font-style: italic; margin: 0;">Commencez à taper votre article ici... Vous pouvez utiliser tous les outils de formatage disponibles dans la barre d\'outils ci-dessus.</p>';
+      } else {
+        contentArea.style.backgroundColor = '#ffffff';
+        contentArea.style.color = '#374151';
+        contentArea.innerHTML = '<p style="color: #9ca3af; font-style: italic; margin: 0;">Commencez à taper votre article ici... Vous pouvez utiliser tous les outils de formatage disponibles dans la barre d\'outils ci-dessus.</p>';
+      }
+    };
+    
+    // Apply initial dark mode styling
+    applyDarkMode();
+    
+    // Watch for dark mode changes
+    const observer = new MutationObserver(() => {
+      applyDarkMode();
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+    
+    // Add event listeners
+    contentArea.addEventListener('input', () => {
+      const hiddenTextarea = document.getElementById('content');
+      if (hiddenTextarea) {
+        hiddenTextarea.value = contentArea.innerHTML;
+      }
+    });
+    
+    contentArea.addEventListener('focus', () => {
+      if (contentArea.innerHTML.includes('Commencez à taper votre article ici')) {
+        contentArea.innerHTML = '';
+      }
+    });
+    
+    // Assemble editor
+    container.appendChild(toolbar);
+    container.appendChild(contentArea);
+    
+    // Store reference
+    window.simpleRichTextEditor = {
+      contentArea: contentArea,
+      getContent: () => contentArea.innerHTML,
+      setContent: (html) => { contentArea.innerHTML = html; }
+    };
+    
+    console.log('Simple Rich Text Editor initialized successfully');
+  } catch (error) {
+    console.error('Error initializing Simple Rich Text Editor:', error);
+  }
+}
+
+// Execute formatting commands
+function executeCommand(command, value = null) {
+  try {
+    if (command === 'createLink') {
+      const url = prompt('Entrez l\'URL du lien:');
+      if (url) {
+        document.execCommand(command, false, url);
+      }
+    } else if (command === 'formatBlock' && value) {
+      document.execCommand(command, false, value);
+    } else {
+      document.execCommand(command, false, value);
+    }
+  } catch (error) {
+    console.error('Error executing command:', command, error);
+  }
+}
+
+// Execute custom commands for tables and layouts
+function executeCustomCommand(command) {
+  try {
+    const contentArea = window.simpleRichTextEditor?.contentArea;
+    if (!contentArea) return;
+    
+    switch (command) {
+      case 'insertTable':
+        insertTable();
+        break;
+      case 'insertTableRow':
+        insertTableRow();
+        break;
+      case 'insertTableColumn':
+        insertTableColumn();
+        break;
+      case 'deleteTableRow':
+        deleteTableRow();
+        break;
+      case 'deleteTableColumn':
+        deleteTableColumn();
+        break;
+      case 'insertDiv':
+        insertDiv();
+        break;
+      case 'insertSpan':
+        insertSpan();
+        break;
+      default:
+        console.warn('Unknown custom command:', command);
+    }
+  } catch (error) {
+    console.error('Error executing custom command:', command, error);
+  }
+}
+
+// Insert table
+function insertTable() {
+  const rows = prompt('Nombre de lignes:', '3');
+  const cols = prompt('Nombre de colonnes:', '3');
+  
+  if (rows && cols && !isNaN(rows) && !isNaN(cols)) {
+    const table = document.createElement('table');
+    table.style.cssText = `
+      border-collapse: collapse;
+      width: 100%;
+      margin: 10px 0;
+      border: 1px solid #d1d5db;
+    `;
+    
+    for (let i = 0; i < parseInt(rows); i++) {
+      const row = document.createElement('tr');
+      for (let j = 0; j < parseInt(cols); j++) {
+        const cell = document.createElement(i === 0 ? 'th' : 'td');
+        cell.textContent = i === 0 ? `En-tête ${j + 1}` : `Cellule ${i}-${j + 1}`;
+        cell.style.cssText = `
+          border: 1px solid #d1d5db;
+          padding: 8px;
+          text-align: left;
+        `;
+        if (i === 0) {
+          cell.style.backgroundColor = '#f3f4f6';
+          cell.style.fontWeight = 'bold';
+        }
+        row.appendChild(cell);
+      }
+      table.appendChild(row);
+    }
+    
+    insertHTML(table.outerHTML);
+  }
+}
+
+// Insert table row
+function insertTableRow() {
+  const selection = window.getSelection();
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const table = range.commonAncestorContainer.closest('table');
+    if (table) {
+      const newRow = document.createElement('tr');
+      const colCount = table.rows[0].cells.length;
+      for (let i = 0; i < colCount; i++) {
+        const cell = document.createElement('td');
+        cell.textContent = 'Nouvelle cellule';
+        cell.style.cssText = 'border: 1px solid #d1d5db; padding: 8px;';
+        newRow.appendChild(cell);
+      }
+      table.appendChild(newRow);
+    } else {
+      alert('Veuillez placer le curseur dans un tableau');
+    }
+  }
+}
+
+// Insert table column
+function insertTableColumn() {
+  const selection = window.getSelection();
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const table = range.commonAncestorContainer.closest('table');
+    if (table) {
+      for (let i = 0; i < table.rows.length; i++) {
+        const cell = document.createElement(i === 0 ? 'th' : 'td');
+        cell.textContent = i === 0 ? 'Nouvel en-tête' : 'Nouvelle cellule';
+        cell.style.cssText = 'border: 1px solid #d1d5db; padding: 8px;';
+        if (i === 0) {
+          cell.style.backgroundColor = '#f3f4f6';
+          cell.style.fontWeight = 'bold';
+        }
+        table.rows[i].appendChild(cell);
+      }
+    } else {
+      alert('Veuillez placer le curseur dans un tableau');
+    }
+  }
+}
+
+// Delete table row
+function deleteTableRow() {
+  const selection = window.getSelection();
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const table = range.commonAncestorContainer.closest('table');
+    const row = range.commonAncestorContainer.closest('tr');
+    if (table && row && table.rows.length > 1) {
+      row.remove();
+    } else {
+      alert('Impossible de supprimer la dernière ligne du tableau');
+    }
+  }
+}
+
+// Delete table column
+function deleteTableColumn() {
+  const selection = window.getSelection();
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const table = range.commonAncestorContainer.closest('table');
+    const cell = range.commonAncestorContainer.closest('td, th');
+    if (table && cell && table.rows[0].cells.length > 1) {
+      const colIndex = Array.from(table.rows[0].cells).indexOf(cell);
+      for (let i = 0; i < table.rows.length; i++) {
+        if (table.rows[i].cells[colIndex]) {
+          table.rows[i].cells[colIndex].remove();
+        }
+      }
+    } else {
+      alert('Impossible de supprimer la dernière colonne du tableau');
+    }
+  }
+}
+
+// Insert div container
+function insertDiv() {
+  const div = document.createElement('div');
+  div.style.cssText = `
+    margin: 10px 0;
+    padding: 15px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background-color: #f9fafb;
+    min-height: 50px;
+  `;
+  div.innerHTML = '<p>Contenu du conteneur...</p>';
+  insertHTML(div.outerHTML);
+}
+
+// Insert span
+function insertSpan() {
+  const span = document.createElement('span');
+  span.style.cssText = `
+    background-color: #fef3c7;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #f59e0b;
+  `;
+  span.textContent = 'Texte en surbrillance';
+  insertHTML(span.outerHTML);
+}
+
+// Apply numbering style
+function applyNumberingStyle(style) {
+  if (!style) return;
+  
+  const selection = window.getSelection();
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const list = document.createElement('ol');
+    
+    if (style === 'disc' || style === 'circle' || style === 'square') {
+      list = document.createElement('ul');
+      list.style.listStyleType = style;
+    } else {
+      list.style.listStyleType = style;
+    }
+    
+    const items = ['Premier élément', 'Deuxième élément', 'Troisième élément'];
+    items.forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      li.style.cssText = 'margin: 5px 0; padding: 5px;';
+      list.appendChild(li);
+    });
+    
+    range.deleteContents();
+    range.insertNode(list);
+  }
+}
+
+// Insert HTML helper
+function insertHTML(html) {
+  const contentArea = window.simpleRichTextEditor?.contentArea;
+  if (contentArea) {
+    contentArea.focus();
+    document.execCommand('insertHTML', false, html);
+  }
+}
+
 // Utility functions
 function generateSlug(title) {
   return title
@@ -1087,9 +1765,9 @@ function generateSlug(title) {
 }
 
 function calculateReadTime(content) {
-  const wordsPerMinute = 200;
+  const wordsPerMinute = 300; // Increased from 200 to 300
   const wordCount = content.split(/\s+/).length;
-  return Math.ceil(wordCount / wordsPerMinute);
+  return Math.min(Math.ceil(wordCount / wordsPerMinute), 5); // Cap at 5 minutes max
 }
 
 // Show preview function - Enhanced version!

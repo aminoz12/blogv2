@@ -111,8 +111,8 @@ function generateSlug(title) {
 }
 
 function calculateReadTime(content) {
-    const wordsPerMinute = 200;
+    const wordsPerMinute = 300; // Increased from 200 to 300
     const words = content.trim().split(/\s+/).length;
-    const minutes = Math.ceil(words / wordsPerMinute);
+    const minutes = Math.min(Math.ceil(words / wordsPerMinute), 5); // Cap at 5 minutes max
     return `${minutes} min`;
 }
