@@ -19,7 +19,7 @@ let transporter;
 
 function createTransporter() {
   if (!transporter) {
-    transporter = nodemailer.createTransport(SMTP_CONFIG);
+    transporter = nodemailer.createTransporter(SMTP_CONFIG);
   }
   return transporter;
 }
