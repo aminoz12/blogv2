@@ -61,37 +61,56 @@ try {
           if (!article.featured_image) return null;
           
           console.log('🔍 Processing image for:', article.title);
+          console.log('🔍 Image data type:', typeof article.featured_image);
           
           let imageUrl = null;
           
-          // Handle JSON format
-          if (typeof article.featured_image === 'string') {
+          // Handle object format (MongoDB stores as object)
+          if (typeof article.featured_image === 'object') {
+            imageUrl = article.featured_image?.url || article.featured_image?.src;
+            console.log('🔍 Extracted URL from object:', imageUrl);
+          }
+          // Handle JSON string format
+          else if (typeof article.featured_image === 'string') {
             try {
               const parsed = JSON.parse(article.featured_image);
               imageUrl = parsed?.url || parsed?.src;
+              console.log('🔍 Extracted URL from JSON:', imageUrl);
             } catch (parseError) {
               // Not JSON, treat as direct URL
               imageUrl = article.featured_image;
+              console.log('🔍 Using as direct URL:', imageUrl);
             }
           }
           
-          if (!imageUrl) return null;
+          if (!imageUrl) {
+            console.log('❌ No image URL found');
+            return null;
+          }
+          
+          console.log('🔍 Processing URL:', imageUrl);
           
           // Convert to blog API format
           if (imageUrl.startsWith('/api/uploads/')) {
-            return imageUrl; // Already correct format
+            console.log('✅ Already in blog API format');
+            return imageUrl;
           } else if (imageUrl.includes('/uploads/')) {
             // Extract filename from any URL containing /uploads/
             const match = imageUrl.match(/\/uploads\/(.+)$/);
             if (match) {
-              return `/api/uploads/${match[1]}`;
+              const convertedUrl = `/api/uploads/${match[1]}`;
+              console.log('🔄 Converted to blog API:', convertedUrl);
+              return convertedUrl;
             }
           } else if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-            return imageUrl; // External URL, use as-is
+            console.log('✅ External URL, using as-is');
+            return imageUrl;
           } else if (imageUrl.startsWith('data:image/')) {
-            return imageUrl; // Data URL, use as-is
+            console.log('✅ Data URL, using as-is');
+            return imageUrl;
           }
           
+          console.log('❌ Unrecognized URL format:', imageUrl);
           return null;
         } catch (error) {
           console.error('❌ Error processing image for', article.title, ':', error);
