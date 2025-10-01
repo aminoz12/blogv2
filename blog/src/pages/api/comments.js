@@ -3,6 +3,8 @@ import { executeQueryFactory } from '../../utils/databaseFactory.js';
 export async function GET({ request, url }) {
   try {
     const articleSlug = url.searchParams.get('article_slug');
+    const offset = parseInt(url.searchParams.get('offset')) || 0;
+    const limit = parseInt(url.searchParams.get('limit')) || 10;
     
     if (!articleSlug) {
       return new Response(JSON.stringify({ 
@@ -14,13 +16,14 @@ export async function GET({ request, url }) {
       });
     }
     
-    // Get comments for this article
+    // Get comments for this article with pagination
     const commentsQuery = `
       SELECT * FROM comments
       WHERE article_slug = ?
       ORDER BY created_at ASC
+      LIMIT ? OFFSET ?
     `;
-    const comments = await executeQueryFactory(commentsQuery, [articleSlug]);
+    const comments = await executeQueryFactory(commentsQuery, [articleSlug, limit, offset]);
     
     // Get total comment count
     const countQuery = `
@@ -34,7 +37,9 @@ export async function GET({ request, url }) {
     return new Response(JSON.stringify({ 
       success: true, 
       comments,
-      count: totalCount
+      count: totalCount,
+      offset,
+      limit
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

@@ -500,3 +500,47 @@ export async function testConnection() {
   }
 }
 
+// Create comment function
+export async function createComment(commentData) {
+  try {
+    console.log('📝 Creating comment:', commentData);
+    
+    const connection = await getConnection();
+    
+    const query = `
+      INSERT INTO comments (
+        article_slug, article_title, author_name, author_email, 
+        content, status, parent_id, ip_address, user_agent, notify_replies
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    const params = [
+      commentData.article_slug,
+      commentData.article_title,
+      commentData.author_name,
+      commentData.author_email,
+      commentData.content,
+      commentData.status || 'approved', // Default to approved
+      commentData.parent_id || null,
+      commentData.ip_address || null,
+      commentData.user_agent || null,
+      commentData.notify_replies ? 1 : 0
+    ];
+    
+    const result = await connection.execute(query, params);
+    console.log('✅ Comment created successfully:', result);
+    
+    return {
+      success: true,
+      comment_id: result[0].insertId,
+      message: 'Comment created successfully'
+    };
+  } catch (error) {
+    console.error('❌ Error creating comment:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+

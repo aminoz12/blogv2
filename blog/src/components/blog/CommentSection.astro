@@ -18,20 +18,20 @@ try {
   // Get comments for this article (including legacy {postSlug} comments)
   const commentsQuery = `
     SELECT * FROM comments
-    WHERE article_slug = ? OR article_slug = "{postSlug}"
+    WHERE article_slug = ? OR article_slug = ?
     ORDER BY created_at ASC
-    LIMIT 10
+    LIMIT 5
   `;
-  comments = await executeQueryFactory(commentsQuery, [postSlug]);
+  comments = await executeQueryFactory(commentsQuery, [postSlug, `{postSlug}`]);
   console.log('🔍 Comments fetched:', comments.length, 'comments for slug:', postSlug);
   
   // Get comment count (including legacy {postSlug} comments)
   const countQuery = `
     SELECT COUNT(*) as count
     FROM comments
-    WHERE article_slug = ? OR article_slug = "{postSlug}"
+    WHERE article_slug = ? OR article_slug = ?
   `;
-  const countResult = await executeQueryFactory(countQuery, [postSlug]);
+  const countResult = await executeQueryFactory(countQuery, [postSlug, `{postSlug}`]);
   commentCount = countResult[0]?.count || 0;
   console.log('🔍 Comment count:', commentCount);
 } catch (error) {
@@ -131,7 +131,7 @@ function getInitials(name) {
   </div>
 
   <!-- Comments List -->
-  <div class="space-y-6">
+  <div id="comments-list" class="space-y-6">
     {comments.length > 0 ? (
       comments.map((comment) => (
         <div class="comment-item p-6 bg-secondary-700/20 rounded-xl border border-secondary-600/20 hover:border-secondary-500/40 transition-all duration-200">
@@ -159,12 +159,24 @@ function getInitials(name) {
       </div>
     )}
   </div>
+
+  <!-- Load More Button -->
+  {commentCount > 5 && (
+    <div class="text-center mt-8 pt-6 border-t border-secondary-600/30">
+      <button id="load-more-btn" class="px-6 py-3 bg-secondary-700/50 hover:bg-secondary-600/50 text-secondary-300 hover:text-white rounded-lg transition-all duration-200 border border-secondary-600/30 hover:border-secondary-500/50 flex items-center gap-2 mx-auto">
+        <span>📄</span>
+        <span>Charger plus de commentaires</span>
+      </button>
+    </div>
+  )}
 </section>
 
-<script>
+<script define:vars={{ postSlug, postTitle }}>
   document.addEventListener('DOMContentLoaded', () => {
     console.log('🔍 Setting up comment form');
     const commentForm = document.getElementById('comment-form');
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    let currentOffset = 5; // Start loading from comment 6
     
     if (commentForm) {
       console.log('✅ Comment form found');
@@ -175,8 +187,8 @@ function getInitials(name) {
         
         const formData = new FormData(e.target);
         const commentData = {
-          article_slug: '{postSlug}',
-          article_title: '{postTitle}',
+          article_slug: postSlug,
+          article_title: postTitle,
           author_name: formData.get('name'),
           author_email: formData.get('email'),
           content: formData.get('comment'),
@@ -257,6 +269,103 @@ function getInitials(name) {
       });
     } else {
       console.log('❌ Comment form not found');
+    }
+
+    // Load More functionality
+    if (loadMoreBtn) {
+      loadMoreBtn.addEventListener('click', async () => {
+        console.log('📄 Loading more comments...');
+        
+        // Show loading state
+        const originalText = loadMoreBtn.innerHTML;
+        loadMoreBtn.innerHTML = '<span>⏳</span><span>Chargement...</span>';
+        loadMoreBtn.disabled = true;
+        
+        try {
+          const response = await fetch(`/api/comments?article_slug=${postSlug}&offset=${currentOffset}&limit=5`);
+          const result = await response.json();
+          
+          if (result.success && result.comments.length > 0) {
+            console.log('📄 Loaded more comments:', result.comments.length);
+            
+            // Add new comments to the list
+            const commentsList = document.getElementById('comments-list');
+            result.comments.forEach(comment => {
+              const commentElement = createCommentElement(comment);
+              commentsList.appendChild(commentElement);
+            });
+            
+            currentOffset += result.comments.length;
+            
+            // Hide button if no more comments
+            if (result.comments.length < 5) {
+              loadMoreBtn.style.display = 'none';
+            }
+          } else {
+            // No more comments
+            loadMoreBtn.style.display = 'none';
+          }
+        } catch (error) {
+          console.error('❌ Error loading more comments:', error);
+        } finally {
+          // Reset button state
+          loadMoreBtn.innerHTML = originalText;
+          loadMoreBtn.disabled = false;
+        }
+      });
+    }
+
+    // Helper function to create comment element
+    function createCommentElement(comment) {
+      const commentDiv = document.createElement('div');
+      commentDiv.className = 'comment-item p-6 bg-secondary-700/20 rounded-xl border border-secondary-600/20 hover:border-secondary-500/40 transition-all duration-200';
+      
+      // Get initials
+      const initials = comment.author_name
+        .split(' ')
+        .map(word => word.charAt(0))
+        .join('')
+        .toUpperCase()
+        .substring(0, 2);
+      
+      // Format date
+      const date = new Date(comment.created_at);
+      const now = new Date();
+      const diffInSeconds = Math.floor((now - date) / 1000);
+      
+      let timeAgo;
+      if (diffInSeconds < 60) timeAgo = 'Il y a quelques secondes';
+      else if (diffInSeconds < 3600) timeAgo = `Il y a ${Math.floor(diffInSeconds / 60)} minute(s)`;
+      else if (diffInSeconds < 86400) timeAgo = `Il y a ${Math.floor(diffInSeconds / 3600)} heure(s)`;
+      else if (diffInSeconds < 2592000) timeAgo = `Il y a ${Math.floor(diffInSeconds / 86400)} jour(s)`;
+      else {
+        timeAgo = date.toLocaleDateString('fr-FR', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      
+      commentDiv.innerHTML = `
+        <div class="flex items-start gap-4 mb-4">
+          <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
+            ${initials}
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-3 mb-2">
+              <span class="font-semibold text-white text-lg">${comment.author_name}</span>
+              <span class="text-sm text-secondary-400">${timeAgo}</span>
+            </div>
+            <p class="text-secondary-200 leading-relaxed text-base whitespace-pre-wrap">
+              ${comment.content}
+            </p>
+          </div>
+        </div>
+      `;
+      
+      return commentDiv;
     }
   });
 </script>

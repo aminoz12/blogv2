@@ -1,0 +1,557 @@
+/* Rich Text Editor Styles */
+.rich-text-editor-wrapper {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.rich-text-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 4px;
+  min-height: 48px;
+}
+
+.rich-text-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  color: #374151;
+}
+
+.rich-text-btn:hover {
+  background-color: #e5e7eb;
+  color: #1f2937;
+}
+
+.rich-text-btn:active {
+  background-color: #d1d5db;
+  transform: translateY(1px);
+}
+
+.rich-text-btn.active {
+  background-color: #dbeafe;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.rich-text-select {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  font-size: 12px;
+  cursor: pointer;
+  color: #374151;
+  min-width: 100px;
+}
+
+.rich-text-select:hover {
+  border-color: #9ca3af;
+}
+
+.rich-text-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.rich-text-content {
+  min-height: 400px;
+  padding: 16px;
+  outline: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #374151;
+  overflow-y: auto;
+  background-color: #ffffff;
+}
+
+.rich-text-content:focus {
+  background-color: #ffffff;
+}
+
+.rich-text-content[data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  font-style: italic;
+  pointer-events: none;
+}
+
+/* Dark mode support */
+.dark .rich-text-editor-wrapper {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+.dark .rich-text-toolbar {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  padding: 8px 12px !important;
+  background-color: rgb(0 23 46 / 95%) !important;
+  border-bottom: 1px solid rgb(229, 231, 235) !important;
+  gap: 4px !important;
+}
+
+/* Additional specificity for dark mode toolbar */
+.dark .rich-text-editor-wrapper .rich-text-toolbar {
+  background-color: rgb(0 23 46 / 95%) !important;
+}
+
+/* Force dark mode toolbar background */
+html.dark .rich-text-toolbar,
+body.dark .rich-text-toolbar,
+[data-theme="dark"] .rich-text-toolbar,
+.dark-mode .rich-text-toolbar,
+.theme-dark .rich-text-toolbar {
+  background-color: rgb(0 23 46 / 95%) !important;
+}
+
+/* Override any existing background */
+.rich-text-toolbar[style*="background-color"] {
+  background-color: rgb(0 23 46 / 95%) !important;
+}
+
+/* Force dark mode toolbar - highest specificity */
+.rich-text-editor-wrapper .rich-text-toolbar {
+  background-color: #f9fafb;
+}
+
+.dark .rich-text-editor-wrapper .rich-text-toolbar,
+html.dark .rich-text-editor-wrapper .rich-text-toolbar,
+body.dark .rich-text-editor-wrapper .rich-text-toolbar,
+[data-theme="dark"] .rich-text-editor-wrapper .rich-text-toolbar {
+  background-color: rgb(0 23 46 / 95%) !important;
+  border-bottom: 1px solid rgb(229, 231, 235) !important;
+}
+
+.dark .rich-text-btn {
+  color: #ffffff !important;
+  background-color: transparent;
+}
+
+.dark .rich-text-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.dark .rich-text-btn.active {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+.dark .rich-text-select {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #ffffff !important;
+}
+
+.dark .rich-text-select:hover {
+  border-color: #6b7280 !important;
+  background-color: #4b5563 !important;
+}
+
+.dark .rich-text-select option {
+  background-color: #374151 !important;
+  color: #ffffff !important;
+}
+
+/* Force dark mode styling for all select elements */
+.dark .rich-text-editor-wrapper .rich-text-select,
+html.dark .rich-text-editor-wrapper .rich-text-select,
+body.dark .rich-text-editor-wrapper .rich-text-select,
+[data-theme="dark"] .rich-text-editor-wrapper .rich-text-select {
+  background-color: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #ffffff !important;
+}
+
+.dark .rich-text-editor-wrapper .rich-text-select:hover,
+html.dark .rich-text-editor-wrapper .rich-text-select:hover,
+body.dark .rich-text-editor-wrapper .rich-text-select:hover,
+[data-theme="dark"] .rich-text-editor-wrapper .rich-text-select:hover {
+  border-color: #6b7280 !important;
+  background-color: #4b5563 !important;
+}
+
+.dark .rich-text-editor-wrapper .rich-text-select option,
+html.dark .rich-text-editor-wrapper .rich-text-select option,
+body.dark .rich-text-editor-wrapper .rich-text-select option,
+[data-theme="dark"] .rich-text-editor-wrapper .rich-text-select option {
+  background-color: #374151 !important;
+  color: #ffffff !important;
+}
+
+.dark .rich-text-content {
+  background-color: #1f2937;
+  color: #ffffff !important;
+}
+
+/* Force white text in dark mode content area */
+.dark .rich-text-editor-wrapper .rich-text-content,
+html.dark .rich-text-editor-wrapper .rich-text-content,
+body.dark .rich-text-editor-wrapper .rich-text-content,
+[data-theme="dark"] .rich-text-editor-wrapper .rich-text-content {
+  color: #ffffff !important;
+  background-color: #1f2937 !important;
+}
+
+.dark .rich-text-content[data-placeholder]:empty:before {
+  color: #9ca3af !important;
+}
+
+/* Table styles for dark mode */
+.dark .rich-text-content table,
+.dark .rich-text-content .rich-text-table {
+  border-color: #4b5563;
+  background-color: #1f2937;
+}
+
+.dark .rich-text-content table th,
+.dark .rich-text-content table td,
+.dark .rich-text-content .rich-text-table th,
+.dark .rich-text-content .rich-text-table td {
+  border-color: #4b5563;
+  background-color: #1f2937;
+  color: #f9fafb;
+}
+
+.dark .rich-text-content table th,
+.dark .rich-text-content .rich-text-table th {
+  background-color: #111827;
+  color: #d1d5db;
+}
+
+.dark .rich-text-content table tr:nth-child(even),
+.dark .rich-text-content .rich-text-table tr:nth-child(even) {
+  background-color: #111827;
+}
+
+.dark .rich-text-content table tr:hover,
+.dark .rich-text-content .rich-text-table tr:hover {
+  background-color: #374151;
+}
+
+/* Code block styles for dark mode */
+.dark .rich-text-content pre {
+  background-color: #111827;
+  color: #f9fafb;
+  border: 1px solid #374151;
+}
+
+.dark .rich-text-content code {
+  background-color: #111827;
+  color: #f9fafb;
+  border: 1px solid #374151;
+}
+
+/* Address and container styles for dark mode */
+.dark .rich-text-content address {
+  background-color: #111827 !important;
+  color: #f9fafb !important;
+  border-left-color: #60a5fa !important;
+}
+
+.dark .rich-text-content div[style*="background-color: #f9fafb"] {
+  background-color: #111827 !important;
+  color: #f9fafb !important;
+  border-color: #4b5563 !important;
+}
+
+/* Additional dark mode toolbar styling */
+.dark .rich-text-toolbar .rich-text-btn {
+  color: #ffffff !important;
+  background-color: transparent !important;
+  border: none !important;
+}
+
+.dark .rich-text-toolbar .rich-text-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.dark .rich-text-toolbar .rich-text-btn:active {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+/* Ensure all toolbar text is white in dark mode */
+.dark .rich-text-toolbar {
+  color: #ffffff;
+}
+
+.dark .rich-text-toolbar * {
+  color: inherit;
+}
+
+/* Color picker buttons in dark mode */
+.dark .rich-text-btn[style*="background"] {
+  border: 2px solid #334155 !important;
+}
+
+.dark .rich-text-btn[style*="background"]:hover {
+  border-color: #475569 !important;
+  transform: scale(1.05);
+}
+
+/* Content formatting styles */
+.rich-text-content h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 1.5rem 0 1rem 0;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.dark .rich-text-content h1 {
+  color: #f9fafb;
+}
+
+.rich-text-content h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.75rem 0;
+  color: #111827;
+  line-height: 1.3;
+}
+
+.dark .rich-text-content h2 {
+  color: #f9fafb;
+}
+
+.rich-text-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.dark .rich-text-content h3 {
+  color: #f9fafb;
+}
+
+.rich-text-content p {
+  margin: 0.75rem 0;
+  line-height: 1.6;
+}
+
+.rich-text-content blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: #6b7280;
+  background-color: #f9fafb;
+  padding: 1rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+
+.dark .rich-text-content blockquote {
+  border-color: #4b5563;
+  color: #9ca3af;
+  background-color: #111827;
+}
+
+.rich-text-content ul,
+.rich-text-content ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.rich-text-content li {
+  margin: 0.25rem 0;
+  line-height: 1.6;
+}
+
+.rich-text-content a {
+  color: #3b82f6;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.rich-text-content a:hover {
+  color: #1d4ed8;
+}
+
+.dark .rich-text-content a {
+  color: #60a5fa;
+}
+
+.dark .rich-text-content a:hover {
+  color: #93c5fd;
+}
+
+.rich-text-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Table styles */
+.rich-text-content table,
+.rich-text-content .rich-text-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  border: 2px solid #d1d5db;
+  background-color: #ffffff;
+}
+
+.rich-text-content table th,
+.rich-text-content table td {
+  border: 1px solid #d1d5db;
+  padding: 8px 12px;
+  text-align: left;
+  background-color: #ffffff;
+  color: #374151;
+}
+
+.rich-text-content table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  color: #111827;
+}
+
+.rich-text-content table tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.rich-text-content table tr:hover {
+  background-color: #f3f4f6;
+}
+
+/* Code block styles */
+.rich-text-content pre {
+  background-color: #f3f4f6;
+  color: #1f2937;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  margin: 1rem 0;
+  overflow-x: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.rich-text-content code {
+  background-color: #f3f4f6;
+  color: #1f2937;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid #d1d5db;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+}
+
+.rich-text-content hr {
+  border: none;
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 2rem 0;
+}
+
+.dark .rich-text-content hr {
+  background-color: #4b5563;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .rich-text-toolbar {
+    padding: 6px 8px;
+    gap: 2px;
+  }
+  
+  .rich-text-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+  
+  .rich-text-select {
+    font-size: 11px;
+    min-width: 80px;
+    padding: 3px 6px;
+  }
+  
+  .rich-text-content {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+/* Color picker button styles */
+.rich-text-btn[style*="background"] {
+  position: relative;
+  border: 2px solid #d1d5db;
+}
+
+.rich-text-btn[style*="background"]:hover {
+  border-color: #9ca3af;
+  transform: scale(1.05);
+}
+
+.dark .rich-text-btn[style*="background"] {
+  border-color: #4b5563;
+}
+
+.dark .rich-text-btn[style*="background"]:hover {
+  border-color: #6b7280;
+}
+
+/* Toolbar separators */
+.rich-text-toolbar .separator {
+  width: 1px;
+  height: 24px;
+  background-color: #d1d5db;
+  margin: 0 4px;
+}
+
+.dark .rich-text-toolbar .separator {
+  background-color: #334155;
+}
+
+/* Loading state */
+.rich-text-editor-wrapper.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.rich-text-editor-wrapper.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
