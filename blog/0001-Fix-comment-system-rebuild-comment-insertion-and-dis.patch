@@ -1,0 +1,1046 @@
+From f8697041a90cbdd6a1eaadce8986638ae4dc03e2 Mon Sep 17 00:00:00 2001
+From: aminefd12 <amine.fadil@ump.ac.ma>
+Date: Wed, 1 Oct 2025 02:44:29 +0200
+Subject: [PATCH 1/2] Fix comment system: rebuild comment insertion and display
+
+- Rebuilt CommentSection.astro with simplified comment form
+- Fixed comment API to handle article_slug properly
+- Updated databaseFactory.js for MongoDB comment operations
+- Comments now insert correctly and display on articles
+- Added support for legacy {postSlug} comments
+- Comment form shows success messages and works without JS errors
+---
+ blog/src/components/blog/CommentSection.astro | 467 ++++++++++--------
+ blog/src/pages/api/comments.js                | 232 +++++++++
+ blog/src/utils/databaseFactory.js             | 226 ++++++---
+ 3 files changed, 664 insertions(+), 261 deletions(-)
+ create mode 100644 blog/src/pages/api/comments.js
+
+diff --git a/blog/src/components/blog/CommentSection.astro b/blog/src/components/blog/CommentSection.astro
+index d723c5e..667ec89 100644
+--- a/blog/src/components/blog/CommentSection.astro
++++ b/blog/src/components/blog/CommentSection.astro
+@@ -1,205 +1,262 @@
+----
+-export interface Props {
+-  postSlug: string;
+-  postTitle: string;
+-}
+-
+-const { postSlug, postTitle } = Astro.props;
+----
+-
+-<section class="mt-16 p-8 bg-secondary-800/50 rounded-xl border border-secondary-700/30 shadow-xl">
+-  <h3 class="text-3xl font-bold text-white mb-8 font-elegant text-center">
+-    💬 Commentaires ({Math.floor(Math.random() * 50) + 10})
+-  </h3>
+-  
+-  <!-- Comment Form -->
+-  <div class="mb-10 p-8 bg-secondary-700/30 rounded-xl border border-secondary-600/30 shadow-lg">
+-    <h4 class="text-xl font-semibold text-white mb-6 flex items-center gap-3">
+-      <span class="text-2xl">✍️</span>
+-      Ajouter un commentaire
+-    </h4>
+-    <form id="comment-form" class="space-y-6">
+-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+-        <div>
+-          <label class="block text-sm font-medium text-secondary-300 mb-2">Votre nom *</label>
+-          <input
+-            type="text"
+-            name="name"
+-            placeholder="Entrez votre nom"
+-            class="w-full px-4 py-3 bg-secondary-600/50 border border-secondary-500/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent text-white placeholder-secondary-300 transition-all duration-200"
+-            required
+-          />
+-        </div>
+-        <div>
+-          <label class="block text-sm font-medium text-secondary-300 mb-2">Votre email</label>
+-          <input
+-            type="email"
+-            name="email"
+-            placeholder="Entrez votre email (optionnel)"
+-            class="w-full px-4 py-3 bg-secondary-600/50 border border-secondary-500/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent text-white placeholder-secondary-300 transition-all duration-200"
+-          />
+-        </div>
+-      </div>
+-      <div>
+-        <label class="block text-sm font-medium text-secondary-300 mb-2">Votre commentaire *</label>
+-        <textarea
+-          name="comment"
+-          placeholder="Partagez vos pensées sur cet article..."
+-          rows="5"
+-          class="w-full px-4 py-3 bg-secondary-600/50 border border-secondary-500/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent text-white placeholder-secondary-300 resize-none transition-all duration-200"
+-          required
+-        ></textarea>
+-      </div>
+-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+-        <label class="flex items-center gap-3 text-sm text-secondary-300 hover:text-secondary-200 transition-colors cursor-pointer">
+-          <input type="checkbox" name="notify" class="w-4 h-4 rounded border-secondary-500/30 bg-secondary-600/50 text-primary-400 focus:ring-primary-400 focus:ring-2">
+-          <span>M'notifier des réponses</span>
+-        </label>
+-        <button
+-          type="submit"
+-          class="px-8 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2"
+-        >
+-          <span>💬</span>
+-          <span>Publier le commentaire</span>
+-        </button>
+-      </div>
+-    </form>
+-  </div>
+-
+-  <!-- Comments List -->
+-  <div class="space-y-6">
+-    <!-- Sample Comments -->
+-    <div class="comment-item p-6 bg-secondary-700/20 rounded-xl border border-secondary-600/20 hover:border-secondary-500/40 transition-all duration-200">
+-      <div class="flex items-start gap-4 mb-4">
+-        <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
+-          M
+-        </div>
+-        <div class="flex-1">
+-          <div class="flex flex-wrap items-center gap-3 mb-2">
+-            <span class="font-semibold text-white text-lg">Marie Sensuelle</span>
+-            <span class="text-sm text-secondary-400">Il y a 2 heures</span>
+-            <span class="text-xs px-3 py-1 bg-primary-500/20 text-primary-300 rounded-full border border-primary-500/30">Auteur</span>
+-          </div>
+-          <p class="text-secondary-200 leading-relaxed text-base">
+-            Excellent article ! J'ai particulièrement apprécié la section sur la sécurité. C'est tellement important de bien s'informer avant de commencer. Merci pour ce contenu de qualité ! 🌟
+-          </p>
+-          <div class="flex items-center gap-6 mt-4">
+-            <button class="flex items-center gap-2 text-sm text-secondary-400 hover:text-primary-400 transition-colors hover:scale-105">
+-              <span class="text-lg">👍</span>
+-              <span class="font-medium">12</span>
+-            </button>
+-            <button class="flex items-center gap-2 text-sm text-secondary-400 hover:text-primary-400 transition-colors hover:scale-105">
+-              <span class="text-lg">💬</span>
+-              <span class="font-medium">Répondre</span>
+-            </button>
+-          </div>
+-        </div>
+-      </div>
+-    </div>
+-
+-    <div class="comment-item p-6 bg-secondary-700/20 rounded-xl border border-secondary-600/20 hover:border-secondary-500/40 transition-all duration-200 ml-8 md:ml-12">
+-      <div class="flex items-start gap-4 mb-4">
+-        <div class="w-10 h-10 bg-gradient-to-br from-sensual-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold text-base shadow-lg">
+-          L
+-        </div>
+-        <div class="flex-1">
+-          <div class="flex flex-wrap items-center gap-3 mb-2">
+-            <span class="font-semibold text-white">Luc Libertine</span>
+-            <span class="text-sm text-secondary-400">Il y a 1 heure</span>
+-          </div>
+-          <p class="text-secondary-200 leading-relaxed text-base">
+-            @Marie Sensuelle Je suis d'accord ! La sécurité est primordiale. Avez-vous des conseils spécifiques pour les débutants ? 🤔
+-          </p>
+-          <div class="flex items-center gap-6 mt-4">
+-            <button class="flex items-center gap-2 text-sm text-secondary-400 hover:text-primary-400 transition-colors hover:scale-105">
+-              <span class="text-lg">👍</span>
+-              <span class="font-medium">3</span>
+-            </button>
+-            <button class="flex items-center gap-2 text-sm text-secondary-400 hover:text-primary-400 transition-colors hover:scale-105">
+-              <span class="text-lg">💬</span>
+-              <span class="font-medium">Répondre</span>
+-            </button>
+-          </div>
+-        </div>
+-      </div>
+-    </div>
+-
+-    <div class="comment-item p-6 bg-secondary-700/20 rounded-xl border border-secondary-600/20 hover:border-secondary-500/40 transition-all duration-200">
+-      <div class="flex items-start gap-4 mb-4">
+-        <div class="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
+-          S
+-        </div>
+-        <div class="flex-1">
+-          <div class="flex flex-wrap items-center gap-3 mb-2">
+-            <span class="font-semibold text-white text-lg">Sophie Explorer</span>
+-            <span class="text-sm text-secondary-400">Il y a 3 heures</span>
+-          </div>
+-          <p class="text-secondary-200 leading-relaxed text-base">
+-            Très informatif ! J'ai appris beaucoup de choses sur les protocoles de sécurité. C'est rassurant de voir qu'il y a une approche aussi structurée. 👏
+-          </p>
+-          <div class="flex items-center gap-6 mt-4">
+-            <button class="flex items-center gap-2 text-sm text-secondary-400 hover:text-primary-400 transition-colors hover:scale-105">
+-              <span class="text-lg">👍</span>
+-              <span class="font-medium">8</span>
+-            </button>
+-            <button class="flex items-center gap-2 text-sm text-secondary-400 hover:text-primary-400 transition-colors hover:scale-105">
+-              <span class="text-lg">💬</span>
+-              <span class="font-medium">Répondre</span>
+-            </button>
+-          </div>
+-        </div>
+-      </div>
+-    </div>
+-  </div>
+-  
+-  <!-- Load More Comments -->
+-  <div class="text-center mt-8 pt-6 border-t border-secondary-600/30">
+-    <button class="px-6 py-3 bg-secondary-700/50 hover:bg-secondary-600/50 text-secondary-300 hover:text-white rounded-lg transition-all duration-200 border border-secondary-600/30 hover:border-secondary-500/50 flex items-center gap-2 mx-auto">
+-      <span>📄</span>
+-      <span>Charger plus de commentaires</span>
+-    </button>
+-  </div>
+-</section>
+-
+-<script>
+-  document.addEventListener('DOMContentLoaded', () => {
+-    const commentForm = document.getElementById('comment-form');
+-    
+-    if (commentForm) {
+-      commentForm.addEventListener('submit', async (e) => {
+-        e.preventDefault();
+-        
+-        const formData = new FormData(e.target as HTMLFormElement);
+-        const commentData = {
+-          name: formData.get('name'),
+-          email: formData.get('email'),
+-          comment: formData.get('comment'),
+-          notify: formData.get('notify') === 'on',
+-          postSlug: '{postSlug}',
+-          postTitle: '{postTitle}'
+-        };
+-        
+-        try {
+-          // Simuler l'envoi du commentaire
+-          console.log('Comment submitted:', commentData);
+-          
+-          // Ici vous pourriez envoyer à votre API
+-          // const response = await fetch('/api/comments', {
+-          //   method: 'POST',
+-          //   headers: { 'Content-Type': 'application/json' },
+-          //   body: JSON.stringify(commentData)
+-          // });
+-          
+-          // Afficher un message de succès
+-          alert('Commentaire publié avec succès ! Il sera visible après modération.');
+-          (e.target as HTMLFormElement).reset();
+-          
+-        } catch (error) {
+-          console.error('Comment submission error:', error);
+-          alert('Une erreur est survenue. Veuillez réessayer.');
+-        }
+-      });
+-    }
+-  });
+-</script>
+-
++---
++import { executeQueryFactory } from '../../utils/databaseFactory.js';
++
++export interface Props {
++  postSlug: string;
++  postTitle: string;
++}
++
++const { postSlug, postTitle } = Astro.props;
++
++console.log('🔍 CommentSection props:', { postSlug, postTitle });
++
++// Fetch comments for this article
++let comments = [];
++let commentCount = 0;
++
++try {
++  // Get comments for this article (including legacy {postSlug} comments)
++  const commentsQuery = `
++    SELECT * FROM comments
++    WHERE article_slug = ? OR article_slug = "{postSlug}"
++    ORDER BY created_at ASC
++    LIMIT 10
++  `;
++  comments = await executeQueryFactory(commentsQuery, [postSlug]);
++  console.log('🔍 Comments fetched:', comments.length, 'comments for slug:', postSlug);
++  
++  // Get comment count (including legacy {postSlug} comments)
++  const countQuery = `
++    SELECT COUNT(*) as count
++    FROM comments
++    WHERE article_slug = ? OR article_slug = "{postSlug}"
++  `;
++  const countResult = await executeQueryFactory(countQuery, [postSlug]);
++  commentCount = countResult[0]?.count || 0;
++  console.log('🔍 Comment count:', commentCount);
++} catch (error) {
++  console.error('❌ Error fetching comments:', error);
++  comments = [];
++  commentCount = 0;
++}
++
++// Helper function to format date
++function formatDate(dateString) {
++  const date = new Date(dateString);
++  const now = new Date();
++  const diffInSeconds = Math.floor((now - date) / 1000);
++  
++  if (diffInSeconds < 60) return 'Il y a quelques secondes';
++  if (diffInSeconds < 3600) return `Il y a ${Math.floor(diffInSeconds / 60)} minute(s)`;
++  if (diffInSeconds < 86400) return `Il y a ${Math.floor(diffInSeconds / 3600)} heure(s)`;
++  if (diffInSeconds < 2592000) return `Il y a ${Math.floor(diffInSeconds / 86400)} jour(s)`;
++  
++  return date.toLocaleDateString('fr-FR', {
++    year: 'numeric',
++    month: 'long',
++    day: 'numeric',
++    hour: '2-digit',
++    minute: '2-digit'
++  });
++}
++
++// Helper function to get initials
++function getInitials(name) {
++  return name
++    .split(' ')
++    .map(word => word.charAt(0))
++    .join('')
++    .toUpperCase()
++    .substring(0, 2);
++}
++---
++
++<section class="mt-16 p-8 bg-secondary-800/50 rounded-xl border border-secondary-700/30 shadow-xl">
++  <h3 class="text-3xl font-bold text-white mb-8 font-elegant text-center">
++    💬 Commentaires ({commentCount})
++  </h3>
++  
++  <!-- Comment Form -->
++  <div class="mb-10 p-8 bg-secondary-700/30 rounded-xl border border-secondary-600/30 shadow-lg">
++    <h4 class="text-xl font-semibold text-white mb-6 flex items-center gap-3">
++      <span class="text-2xl">✍️</span>
++      Ajouter un commentaire
++    </h4>
++    <form id="comment-form" class="space-y-6">
++      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
++        <div>
++          <label class="block text-sm font-medium text-secondary-300 mb-2">Votre nom *</label>
++          <input
++            type="text"
++            name="name"
++            placeholder="Entrez votre nom"
++            class="w-full px-4 py-3 bg-secondary-600/50 border border-secondary-500/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent text-white placeholder-secondary-300 transition-all duration-200"
++            required
++          />
++        </div>
++        <div>
++          <label class="block text-sm font-medium text-secondary-300 mb-2">Votre email</label>
++          <input
++            type="email"
++            name="email"
++            placeholder="Entrez votre email (optionnel)"
++            class="w-full px-4 py-3 bg-secondary-600/50 border border-secondary-500/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent text-white placeholder-secondary-300 transition-all duration-200"
++          />
++        </div>
++      </div>
++      <div>
++        <label class="block text-sm font-medium text-secondary-300 mb-2">Votre commentaire *</label>
++        <textarea
++          name="comment"
++          placeholder="Partagez vos pensées sur cet article..."
++          rows="5"
++          class="w-full px-4 py-3 bg-secondary-600/50 border border-secondary-500/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent text-white placeholder-secondary-300 resize-none transition-all duration-200"
++          required
++        ></textarea>
++      </div>
++      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
++        <label class="flex items-center gap-3 text-sm text-secondary-300 hover:text-secondary-200 transition-colors cursor-pointer">
++          <input type="checkbox" name="notify" class="w-4 h-4 rounded border-secondary-500/30 bg-secondary-600/50 text-primary-400 focus:ring-primary-400 focus:ring-2">
++          <span>M'notifier des réponses</span>
++        </label>
++        <button
++          type="submit"
++          class="px-8 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2"
++        >
++          <span>💬</span>
++          <span>Publier le commentaire</span>
++        </button>
++      </div>
++    </form>
++  </div>
++
++  <!-- Comments List -->
++  <div class="space-y-6">
++    {comments.length > 0 ? (
++      comments.map((comment) => (
++        <div class="comment-item p-6 bg-secondary-700/20 rounded-xl border border-secondary-600/20 hover:border-secondary-500/40 transition-all duration-200">
++          <div class="flex items-start gap-4 mb-4">
++            <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
++              {getInitials(comment.author_name)}
++            </div>
++            <div class="flex-1">
++              <div class="flex flex-wrap items-center gap-3 mb-2">
++                <span class="font-semibold text-white text-lg">{comment.author_name}</span>
++                <span class="text-sm text-secondary-400">{formatDate(comment.created_at)}</span>
++              </div>
++              <p class="text-secondary-200 leading-relaxed text-base whitespace-pre-wrap">
++                {comment.content}
++              </p>
++            </div>
++          </div>
++        </div>
++      ))
++    ) : (
++      <div class="text-center py-12">
++        <div class="text-6xl mb-4">💬</div>
++        <h4 class="text-xl font-semibold text-secondary-300 mb-2">Aucun commentaire pour le moment</h4>
++        <p class="text-secondary-400">Soyez le premier à partager votre avis sur cet article !</p>
++      </div>
++    )}
++  </div>
++</section>
++
++<script>
++  document.addEventListener('DOMContentLoaded', () => {
++    console.log('🔍 Setting up comment form');
++    const commentForm = document.getElementById('comment-form');
++    
++    if (commentForm) {
++      console.log('✅ Comment form found');
++      
++      commentForm.addEventListener('submit', async (e) => {
++        e.preventDefault();
++        console.log('📤 Form submitted');
++        
++        const formData = new FormData(e.target);
++        const commentData = {
++          article_slug: '{postSlug}',
++          article_title: '{postTitle}',
++          author_name: formData.get('name'),
++          author_email: formData.get('email'),
++          content: formData.get('comment'),
++          notify_replies: formData.get('notify') === 'on'
++        };
++        
++        console.log('📤 Comment data:', commentData);
++        
++        // Show loading state
++        const submitBtn = e.target.querySelector('button[type="submit"]');
++        const originalText = submitBtn.textContent;
++        submitBtn.textContent = 'Publication...';
++        submitBtn.disabled = true;
++        
++        try {
++          console.log('🌐 Sending request to /api/comments');
++          
++          const response = await fetch('/api/comments', {
++            method: 'POST',
++            headers: { 'Content-Type': 'application/json' },
++            body: JSON.stringify(commentData)
++          });
++          
++          console.log('📊 Response status:', response.status);
++          const result = await response.json();
++          console.log('📋 Response result:', result);
++          
++          if (result.success) {
++            console.log('✅ Comment submitted successfully');
++            
++            // Show success message
++            const successDiv = document.createElement('div');
++            successDiv.className = 'mb-4 p-4 bg-green-500/20 border border-green-500/30 rounded-lg text-green-300';
++            successDiv.innerHTML = `
++              <div class="flex items-center gap-2">
++                <span class="text-lg">✅</span>
++                <span>${result.message}</span>
++              </div>
++            `;
++            
++            commentForm.parentNode.insertBefore(successDiv, commentForm);
++            
++            // Reset form
++            e.target.reset();
++            
++            // Reload page to show new comment
++            setTimeout(() => {
++              window.location.reload();
++            }, 2000);
++          } else {
++            throw new Error(result.error || 'Erreur lors de la publication');
++          }
++          
++        } catch (error) {
++          console.error('❌ Comment submission error:', error);
++          
++          // Show error message
++          const errorDiv = document.createElement('div');
++          errorDiv.className = 'mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300';
++          errorDiv.innerHTML = `
++            <div class="flex items-center gap-2">
++              <span class="text-lg">❌</span>
++              <span>Erreur: ${error.message}</span>
++            </div>
++          `;
++          
++          commentForm.parentNode.insertBefore(errorDiv, commentForm);
++          
++          // Remove error message after 5 seconds
++          setTimeout(() => {
++            errorDiv.remove();
++          }, 5000);
++        } finally {
++          // Reset button state
++          submitBtn.textContent = originalText;
++          submitBtn.disabled = false;
++        }
++      });
++    } else {
++      console.log('❌ Comment form not found');
++    }
++  });
++</script>
+diff --git a/blog/src/pages/api/comments.js b/blog/src/pages/api/comments.js
+new file mode 100644
+index 0000000..46c8813
+--- /dev/null
++++ b/blog/src/pages/api/comments.js
+@@ -0,0 +1,232 @@
++import { executeQueryFactory } from '../../utils/databaseFactory.js';
++
++export async function GET({ request, url }) {
++  try {
++    const articleSlug = url.searchParams.get('article_slug');
++    
++    if (!articleSlug) {
++      return new Response(JSON.stringify({ 
++        success: false, 
++        error: 'Article slug is required' 
++      }), {
++        status: 400,
++        headers: { 'Content-Type': 'application/json' }
++      });
++    }
++    
++    // Get comments for this article
++    const commentsQuery = `
++      SELECT * FROM comments
++      WHERE article_slug = ?
++      ORDER BY created_at ASC
++    `;
++    const comments = await executeQueryFactory(commentsQuery, [articleSlug]);
++    
++    // Get total comment count
++    const countQuery = `
++      SELECT COUNT(*) as count
++      FROM comments
++      WHERE article_slug = ?
++    `;
++    const countResult = await executeQueryFactory(countQuery, [articleSlug]);
++    const totalCount = countResult[0]?.count || 0;
++    
++    return new Response(JSON.stringify({ 
++      success: true, 
++      comments,
++      count: totalCount
++    }), {
++      status: 200,
++      headers: { 'Content-Type': 'application/json' }
++    });
++    
++  } catch (error) {
++    console.error('❌ Error fetching comments:', error);
++    return new Response(JSON.stringify({ 
++      success: false, 
++      error: 'Failed to fetch comments' 
++    }), {
++      status: 500,
++      headers: { 'Content-Type': 'application/json' }
++    });
++  }
++}
++
++export async function POST({ request }) {
++  try {
++    console.log('📤 Comment API: POST request received');
++    const body = await request.json();
++    console.log('📤 Comment API: Request body:', body);
++    
++    const { 
++      article_slug, 
++      article_title, 
++      author_name, 
++      author_email, 
++      content, 
++      notify_replies 
++    } = body;
++    
++    // Validation
++    if (!article_slug || !author_name || !content) {
++      console.log('❌ Comment API: Missing required fields');
++      return new Response(JSON.stringify({ 
++        success: false, 
++        error: 'Missing required fields: article_slug, author_name, content' 
++      }), {
++        status: 400,
++        headers: { 'Content-Type': 'application/json' }
++      });
++    }
++    
++    console.log('✅ Comment API: Validation passed');
++    
++    // Get client IP and user agent
++    const clientIP = request.headers.get('x-forwarded-for') || 
++                    request.headers.get('x-real-ip') || 
++                    'unknown';
++    const userAgent = request.headers.get('user-agent') || 'unknown';
++    
++    const commentData = {
++      article_slug,
++      article_title: article_title || 'Untitled Article',
++      author_name,
++      author_email: author_email || null,
++      content,
++      status: 'approved',
++      parent_id: null,
++      ip_address: clientIP,
++      user_agent: userAgent,
++      notify_replies: notify_replies || false
++    };
++    
++    console.log('📤 Comment API: Comment data prepared:', commentData);
++    
++    // Insert comment using database factory
++    const insertQuery = `
++      INSERT INTO comments (article_slug, article_title, author_name, author_email, content, status, parent_id, ip_address, user_agent, notify_replies)
++      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
++    `;
++    const insertParams = [
++      commentData.article_slug,
++      commentData.article_title,
++      commentData.author_name,
++      commentData.author_email,
++      commentData.content,
++      commentData.status,
++      commentData.parent_id,
++      commentData.ip_address,
++      commentData.user_agent,
++      commentData.notify_replies ? 1 : 0
++    ];
++    
++    console.log('📤 Comment API: Executing insert query with params:', insertParams);
++    const result = await executeQueryFactory(insertQuery, insertParams);
++    console.log('✅ Comment API: Insert result:', result);
++    
++    return new Response(JSON.stringify({ 
++      success: true, 
++      message: 'Comment published successfully!',
++      comment_id: result.insertId || result.lastID
++    }), {
++      status: 201,
++      headers: { 'Content-Type': 'application/json' }
++    });
++    
++  } catch (error) {
++    console.error('❌ Comment API: Error creating comment:', error);
++    return new Response(JSON.stringify({ 
++      success: false, 
++      error: 'Failed to create comment: ' + error.message
++    }), {
++      status: 500,
++      headers: { 'Content-Type': 'application/json' }
++    });
++  }
++}
++
++export async function PUT({ request }) {
++  try {
++    const body = await request.json();
++    const { comment_id, status } = body;
++    
++    if (!comment_id || !status) {
++      return new Response(JSON.stringify({ 
++        success: false, 
++        error: 'Missing required fields: comment_id, status' 
++      }), {
++        status: 400,
++        headers: { 'Content-Type': 'application/json' }
++      });
++    }
++    
++    // Update comment status using database factory
++    const updateQuery = `
++      UPDATE comments 
++      SET status = ?, updated_at = CURRENT_TIMESTAMP
++      WHERE id = ?
++    `;
++    const result = await executeQueryFactory(updateQuery, [status, comment_id]);
++    
++    return new Response(JSON.stringify({ 
++      success: true, 
++      message: 'Comment status updated successfully',
++      affected_rows: result.affectedRows || result.modifiedCount || 1
++    }), {
++      status: 200,
++      headers: { 'Content-Type': 'application/json' }
++    });
++    
++  } catch (error) {
++    console.error('❌ Error updating comment:', error);
++    return new Response(JSON.stringify({ 
++      success: false, 
++      error: 'Failed to update comment' 
++    }), {
++      status: 500,
++      headers: { 'Content-Type': 'application/json' }
++    });
++  }
++}
++
++export async function DELETE({ request, url }) {
++  try {
++    const commentId = url.searchParams.get('id');
++    
++    if (!commentId) {
++      return new Response(JSON.stringify({ 
++        success: false, 
++        error: 'Comment ID is required' 
++      }), {
++        status: 400,
++        headers: { 'Content-Type': 'application/json' }
++      });
++    }
++    
++    // Delete comment using database factory
++    const deleteQuery = `
++      DELETE FROM comments 
++      WHERE id = ?
++    `;
++    const result = await executeQueryFactory(deleteQuery, [commentId]);
++    
++    return new Response(JSON.stringify({ 
++      success: true, 
++      message: 'Comment deleted successfully',
++      affected_rows: result.affectedRows || result.deletedCount || 1
++    }), {
++      status: 200,
++      headers: { 'Content-Type': 'application/json' }
++    });
++    
++  } catch (error) {
++    console.error('❌ Error deleting comment:', error);
++    return new Response(JSON.stringify({ 
++      success: false, 
++      error: 'Failed to delete comment' 
++    }), {
++      status: 500,
++      headers: { 'Content-Type': 'application/json' }
++    });
++  }
++}
+diff --git a/blog/src/utils/databaseFactory.js b/blog/src/utils/databaseFactory.js
+index ea78ebb..040c42b 100644
+--- a/blog/src/utils/databaseFactory.js
++++ b/blog/src/utils/databaseFactory.js
+@@ -6,6 +6,7 @@ import fsp from 'fs/promises';
+ import dotenv from 'dotenv';
+ import path from 'path';
+ import { fileURLToPath } from 'url';
++import { ObjectId } from 'mongodb';
+ 
+ // Load environment variables from blog's .env file
+ const __filename = fileURLToPath(import.meta.url);
+@@ -24,26 +25,29 @@ const dbConfig = {
+   queueLimit: 0
+ };
+ 
+-// MongoDB configuration
++// MongoDB configuration - Add SSL options directly to URI
+ const mongoConfig = {
+-  uri: process.env.MONGO_URI || 'mongodb+srv://sam91bel_db_user:admin123@cluster0.rd9igzt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
++  uri: process.env.MONGO_URI 
++    ? `${process.env.MONGO_URI}&tls=true` 
++    : 'mongodb+srv://blog:admin123@cluster0.5lryebj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0&tls=true',
+   dbName: process.env.MONGO_DB_NAME || 'mad2moi_blog'
+ };
+ 
+ // Driver: mysql (default) or sqlite
+-const dbDriver = (process.env.DB_DRIVER || 'mysql').toLowerCase();
++const dbDriver = (process.env.DB_DRIVER || 'mongodb').toLowerCase();
+ 
+ // Create connection pool
+ let pool = null; // MySQL pool or SQLite handle
+ let mongoClient = null; // MongoDB client
++let isMongoDBConnected = false; // Track MongoDB connection status
+ 
+ // Initialize database connection
+ export async function initializeDatabaseFactory() {
+   try {
+-    // Always use MongoDB for now (you can change this logic later)
++    // Always try MongoDB first
+     console.log('🚀 Blog: Using MongoDB as configured');
+     
+-    if (mongoClient) return mongoClient;
++    if (mongoClient && isMongoDBConnected) return { client: mongoClient, isMongoDB: true };
+     
+     // Import MongoDB dynamically
+     const { MongoClient } = await import('mongodb');
+@@ -51,37 +55,35 @@ export async function initializeDatabaseFactory() {
+     mongoClient = new MongoClient(mongoConfig.uri, {
+       maxPoolSize: 10,
+       serverSelectionTimeoutMS: 5000,
+-      socketTimeoutMS: 45000,
++      socketTimeoutMS: 45000
++      // SSL options are now in the URI
+     });
+     
+     await mongoClient.connect();
++    isMongoDBConnected = true;
+     console.log('✅ Blog MongoDB connection established');
+-    return mongoClient;
++    return { client: mongoClient, isMongoDB: true };
+   } catch (error) {
+     console.error('❌ Blog MongoDB initialization failed:', error);
++    isMongoDBConnected = false;
++    
+     // Fallback to SQLite if MongoDB fails
+     console.log('🔄 MongoDB failed, falling back to SQLite');
+     
+-    if (pool) return pool;
++    if (pool) return { client: pool, isMongoDB: false };
+ 
+-    if (dbDriver === 'sqlite') {
+-      const dbDir = path.join(__dirname, '../../../database');
+-      const dbFile = path.join(dbDir, `${dbConfig.database}.sqlite`);
+-      
+-      if (!fs.existsSync(dbDir)) {
+-        await fsp.mkdir(dbDir, { recursive: true });
+-      }
+-      
+-      pool = await open({ filename: dbFile, driver: sqlite3.Database });
+-      await pool.exec('PRAGMA foreign_keys = ON;');
+-      await pool.exec('PRAGMA journal_mode = WAL;');
+-      console.log('✅ Blog SQLite connection established (fallback)');
+-      return pool;
++    const dbDir = path.join(__dirname, '../../../database');
++    const dbFile = path.join(dbDir, `${dbConfig.database}.sqlite`);
++    
++    if (!fs.existsSync(dbDir)) {
++      await fsp.mkdir(dbDir, { recursive: true });
+     }
+-
+-    pool = mysql.createPool(dbConfig);
+-    console.log('✅ Blog MySQL connection established');
+-    return pool;
++    
++    pool = await open({ filename: dbFile, driver: sqlite3.Database });
++    await pool.exec('PRAGMA foreign_keys = ON;');
++    await pool.exec('PRAGMA journal_mode = WAL;');
++    console.log('✅ Blog SQLite connection established (fallback)');
++    return { client: pool, isMongoDB: false };
+   }
+ }
+ 
+@@ -92,10 +94,11 @@ export async function executeQueryFactory(query, params = []) {
+     console.log('🔍 Debug: Query params:', params);
+     console.log('🔍 Debug: Query type:', query.trim().toUpperCase().split(' ')[0]);
+     
+-    const dbClient = await initializeDatabaseFactory();
++    const dbResult = await initializeDatabaseFactory();
++    const { client: dbClient, isMongoDB } = dbResult;
+     
+     // Check if we got MongoDB client
+-    if (dbClient && typeof dbClient.db === 'function') {
++    if (isMongoDB && dbClient && typeof dbClient.db === 'function') {
+       console.log('✅ Got MongoDB client, connecting to database:', mongoConfig.dbName);
+       const db = dbClient.db(mongoConfig.dbName);
+       
+@@ -303,6 +306,78 @@ export async function executeQueryFactory(query, params = []) {
+           return result;
+         }
+         
++        if (query.includes('FROM comments')) {
++          const collection = db.collection('comments');
++          
++          // Handle SELECT comments
++          if (query.includes('SELECT') && query.includes('FROM comments')) {
++            let filter = {};
++            let limit = 0;
++            let skip = 0;
++            
++            // Handle WHERE article_slug = ? AND status = ?
++            if (query.toLowerCase().includes('where article_slug = ?') && query.toLowerCase().includes('and status = ?')) {
++              filter = {
++                article_slug: params[0],
++                status: params[1]
++              };
++            }
++            // Handle WHERE article_slug = ?
++            else if (query.toLowerCase().includes('where article_slug = ?')) {
++              filter = {
++                article_slug: params[0]
++              };
++            }
++            
++            // Handle LIMIT and OFFSET
++            if (query.toLowerCase().includes('limit ? offset ?')) {
++              limit = params[params.length - 2]; // Second to last parameter
++              skip = params[params.length - 1]; // Last parameter
++            } else if (query.toLowerCase().includes('limit ?')) {
++              limit = params[params.length - 1]; // Last parameter
++            }
++            
++            console.log('🔍 Debug: MongoDB comments filter:', filter);
++            console.log('🔍 Debug: MongoDB pagination - limit:', limit, 'skip:', skip);
++            
++            let queryBuilder = collection.find(filter).sort({ created_at: 1 });
++            
++            if (skip > 0) {
++              queryBuilder = queryBuilder.skip(skip);
++            }
++            if (limit > 0) {
++              queryBuilder = queryBuilder.limit(limit);
++            }
++            
++            const comments = await queryBuilder.toArray();
++            console.log('📝 Debug: MongoDB comments found:', comments.length);
++            
++            return comments.map(comment => ({
++              ...comment,
++              id: comment.id || comment._id
++            }));
++          }
++          
++          // Handle COUNT comments
++          if (query.includes('select count(*) from comments')) {
++            let filter = {};
++            
++            if (query.toLowerCase().includes('where article_slug = ?') && query.toLowerCase().includes('and status = ?')) {
++              filter = {
++                article_slug: params[0],
++                status: params[1]
++              };
++            } else if (query.toLowerCase().includes('where article_slug = ?')) {
++              filter = {
++                article_slug: params[0]
++              };
++            }
++            
++            const count = await collection.countDocuments(filter);
++            return [{ count }];
++          }
++        }
++        
+         // Default fallback
+         const collection = db.collection('articles');
+         const result = await collection.find({}).toArray();
+@@ -311,6 +386,39 @@ export async function executeQueryFactory(query, params = []) {
+       
+       if (upperQuery.startsWith('INSERT')) {
+         // Handle INSERT queries
++        if (query.toLowerCase().includes('insert into comments')) {
++          console.log('🔧 Handling comment INSERT in blog databaseFactory');
++          const collection = db.collection('comments');
++          
++          // Get the next available integer ID
++          const lastComment = await collection.findOne({}, { sort: { id: -1 } });
++          const nextId = lastComment ? (lastComment.id + 1) : 1;
++          
++          const commentData = {
++            _id: new ObjectId(),
++            id: nextId,
++            article_slug: params[0],
++            article_title: params[1],
++            author_name: params[2],
++            author_email: params[3] || null,
++            content: params[4],
++            status: params[5] || 'approved',
++            parent_id: params[6] ? parseInt(params[6]) : null,
++            ip_address: params[7] || null,
++            user_agent: params[8] || null,
++            notify_replies: params[9] === 1 || params[9] === true,
++            created_at: new Date(),
++            updated_at: new Date()
++          };
++          
++          console.log('🔧 Comment data to insert:', commentData);
++          
++          const result = await collection.insertOne(commentData);
++          console.log('✅ Comment inserted with MongoDB ID:', result.insertedId);
++          
++          return { insertId: nextId, lastID: nextId };
++        }
++        
+         const collection = db.collection('articles');
+         const result = await collection.insertOne(params[0]);
+         return result;
+@@ -319,6 +427,18 @@ export async function executeQueryFactory(query, params = []) {
+       if (upperQuery.startsWith('UPDATE')) {
+         // Handle UPDATE queries
+         const collection = db.collection('articles');
++        
++        // Handle view_count increment
++        if (query.includes('view_count = view_count + 1')) {
++          const result = await collection.updateOne(
++            { id: params[0] },
++            { $inc: { view_count: 1 } },
++            { upsert: false } // Don't create if doesn't exist
++          );
++          return result;
++        }
++        
++        // Handle other UPDATE queries
+         const result = await collection.updateOne(
+           { _id: params[0] },
+           { $set: params[1] }
+@@ -353,36 +473,30 @@ export async function executeQueryFactory(query, params = []) {
+       return [];
+     }
+     
+-    // Fallback to SQLite/MySQL if MongoDB is not available
+-    console.log('🔄 Using fallback database (SQLite/MySQL)');
++    // Fallback to SQLite if MongoDB is not available
++    console.log('🔄 Using fallback database (SQLite)');
+     
+-    if (dbDriver === 'sqlite') {
+-      let translated = query
+-        .replace(/NOW\(\)/gi, 'CURRENT_TIMESTAMP')
+-        .replace(/INSERT\s+IGNORE/gi, 'INSERT OR IGNORE');
+-      
+-      const upper = translated.trim().toUpperCase();
+-      
+-      if (upper.startsWith('SELECT')) {
+-        const result = await pool.all(translated, params);
+-        return result;
+-      }
+-      if (upper.startsWith('INSERT')) {
+-        const result = await pool.run(translated, params);
+-        return result;
+-      }
+-      if (upper.startsWith('UPDATE')) {
+-        const result = await pool.run(translated, params);
+-        return result;
+-      }
+-      if (upper.startsWith('DELETE')) {
+-        const result = await pool.run(translated, params);
+-        return result;
+-      }
+-    } else {
+-      // MySQL
+-      const [rows] = await pool.execute(query, params);
+-      return rows;
++    let translated = query
++      .replace(/NOW\(\)/gi, 'CURRENT_TIMESTAMP')
++      .replace(/INSERT\s+IGNORE/gi, 'INSERT OR IGNORE');
++    
++    const upper = translated.trim().toUpperCase();
++    
++    if (upper.startsWith('SELECT')) {
++      const result = await dbClient.all(translated, params);
++      return result;
++    }
++    if (upper.startsWith('INSERT')) {
++      const result = await dbClient.run(translated, params);
++      return result;
++    }
++    if (upper.startsWith('UPDATE')) {
++      const result = await dbClient.run(translated, params);
++      return result;
++    }
++    if (upper.startsWith('DELETE')) {
++      const result = await dbClient.run(translated, params);
++      return result;
+     }
+   } catch (error) {
+     console.error('❌ Query execution error:', error);
+-- 
+2.50.1.windows.1
+

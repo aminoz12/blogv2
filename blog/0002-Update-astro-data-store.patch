@@ -1,0 +1,21 @@
+From 56f9b67fe6ea4e2a12c8692e987ee63b646de660 Mon Sep 17 00:00:00 2001
+From: aminefd12 <amine.fadil@ump.ac.ma>
+Date: Wed, 1 Oct 2025 02:49:44 +0200
+Subject: [PATCH 2/2] Update astro data store
+
+---
+ blog/.astro/data-store.json | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/blog/.astro/data-store.json b/blog/.astro/data-store.json
+index e661dd6..584cca2 100644
+--- a/blog/.astro/data-store.json
++++ b/blog/.astro/data-store.json
+@@ -1 +1 @@
+-[["Map",1,2],"meta::meta",["Map",3,4,5,6],"astro-version","5.13.3","astro-config-digest","{\"root\":{},\"srcDir\":{},\"publicDir\":{},\"outDir\":{},\"cacheDir\":{},\"site\":\"https://your-domain.com\",\"compressHTML\":true,\"base\":\"/\",\"trailingSlash\":\"ignore\",\"output\":\"server\",\"scopedStyleStrategy\":\"attribute\",\"build\":{\"format\":\"file\",\"client\":{},\"server\":{},\"assets\":\"_astro\",\"serverEntry\":\"entry.mjs\",\"redirects\":true,\"inlineStylesheets\":\"auto\",\"concurrency\":1},\"server\":{\"open\":false,\"host\":true,\"port\":4321,\"streaming\":true,\"allowedHosts\":[]},\"redirects\":{},\"image\":{\"endpoint\":{\"route\":\"/_image\",\"entrypoint\":\"astro/assets/endpoint/node\"},\"service\":{\"entrypoint\":\"astro/assets/services/sharp\",\"config\":{}},\"domains\":[],\"remotePatterns\":[],\"responsiveStyles\":false},\"devToolbar\":{\"enabled\":true},\"markdown\":{\"syntaxHighlight\":{\"type\":\"shiki\",\"excludeLangs\":[\"math\"]},\"shikiConfig\":{\"langs\":[],\"langAlias\":{},\"theme\":\"github-dark\",\"themes\":{},\"wrap\":true,\"transformers\":[]},\"remarkPlugins\":[],\"rehypePlugins\":[],\"remarkRehype\":{},\"gfm\":true,\"smartypants\":true},\"security\":{\"checkOrigin\":true},\"env\":{\"schema\":{},\"validateSecrets\":false},\"experimental\":{\"clientPrerender\":false,\"contentIntellisense\":false,\"headingIdCompat\":false,\"preserveScriptOrder\":false,\"liveContentCollections\":false,\"csp\":false,\"staticImportMetaEnv\":false,\"chromeDevtoolsWorkspace\":false},\"legacy\":{\"collections\":false},\"session\":{\"driver\":\"fs-lite\",\"options\":{\"base\":\"C:\\\\Users\\\\pc\\\\Downloads\\\\danialblogs-chat_work\\\\danialblogs-chat_work\\\\blog\\\\node_modules\\\\.astro\\\\sessions\"}}}"]
+\ No newline at end of file
++[["Map",1,2],"meta::meta",["Map",3,4,5,6],"astro-version","5.13.3","astro-config-digest","{\"root\":{},\"srcDir\":{},\"publicDir\":{},\"outDir\":{},\"cacheDir\":{},\"site\":\"https://mad2moi.store/blog\",\"compressHTML\":true,\"base\":\"/\",\"trailingSlash\":\"ignore\",\"output\":\"server\",\"scopedStyleStrategy\":\"attribute\",\"build\":{\"format\":\"file\",\"client\":{},\"server\":{},\"assets\":\"_astro\",\"serverEntry\":\"entry.mjs\",\"redirects\":true,\"inlineStylesheets\":\"auto\",\"concurrency\":1},\"server\":{\"open\":false,\"host\":true,\"port\":4321,\"streaming\":true,\"allowedHosts\":[]},\"redirects\":{},\"image\":{\"endpoint\":{\"route\":\"/_image\",\"entrypoint\":\"astro/assets/endpoint/node\"},\"service\":{\"entrypoint\":\"astro/assets/services/sharp\",\"config\":{}},\"domains\":[],\"remotePatterns\":[],\"responsiveStyles\":false},\"devToolbar\":{\"enabled\":true},\"markdown\":{\"syntaxHighlight\":{\"type\":\"shiki\",\"excludeLangs\":[\"math\"]},\"shikiConfig\":{\"langs\":[],\"langAlias\":{},\"theme\":\"github-dark\",\"themes\":{},\"wrap\":true,\"transformers\":[]},\"remarkPlugins\":[],\"rehypePlugins\":[],\"remarkRehype\":{},\"gfm\":true,\"smartypants\":true},\"security\":{\"checkOrigin\":true},\"env\":{\"schema\":{},\"validateSecrets\":false},\"experimental\":{\"clientPrerender\":false,\"contentIntellisense\":false,\"headingIdCompat\":false,\"preserveScriptOrder\":false,\"liveContentCollections\":false,\"csp\":false,\"staticImportMetaEnv\":false,\"chromeDevtoolsWorkspace\":false},\"legacy\":{\"collections\":false},\"session\":{\"driver\":\"fs-lite\",\"options\":{\"base\":\"C:\\\\Users\\\\pc\\\\Downloads\\\\blogv3\\\\blogv3\\\\blog\\\\node_modules\\\\.astro\\\\sessions\"}}}"]
+\ No newline at end of file
+-- 
+2.50.1.windows.1
+
