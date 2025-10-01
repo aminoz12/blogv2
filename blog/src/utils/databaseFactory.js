@@ -6,6 +6,7 @@ import fsp from 'fs/promises';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ObjectId } from 'mongodb';
 
 // Load environment variables from blog's .env file
 const __filename = fileURLToPath(import.meta.url);
@@ -24,26 +25,29 @@ const dbConfig = {
   queueLimit: 0
 };
 
-// MongoDB configuration
+// MongoDB configuration - Add SSL options directly to URI
 const mongoConfig = {
-  uri: process.env.MONGO_URI || 'mongodb+srv://sam91bel_db_user:admin123@cluster0.rd9igzt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
+  uri: process.env.MONGO_URI 
+    ? `${process.env.MONGO_URI}&tls=true` 
+    : 'mongodb+srv://blog:admin123@cluster0.5lryebj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0&tls=true',
   dbName: process.env.MONGO_DB_NAME || 'mad2moi_blog'
 };
 
 // Driver: mysql (default) or sqlite
-const dbDriver = (process.env.DB_DRIVER || 'mysql').toLowerCase();
+const dbDriver = (process.env.DB_DRIVER || 'mongodb').toLowerCase();
 
 // Create connection pool
 let pool = null; // MySQL pool or SQLite handle
 let mongoClient = null; // MongoDB client
+let isMongoDBConnected = false; // Track MongoDB connection status
 
 // Initialize database connection
 export async function initializeDatabaseFactory() {
   try {
-    // Always use MongoDB for now (you can change this logic later)
+    // Always try MongoDB first
     console.log('🚀 Blog: Using MongoDB as configured');
     
-    if (mongoClient) return mongoClient;
+    if (mongoClient && isMongoDBConnected) return { client: mongoClient, isMongoDB: true };
     
     // Import MongoDB dynamically
     const { MongoClient } = await import('mongodb');
@@ -51,37 +55,35 @@ export async function initializeDatabaseFactory() {
     mongoClient = new MongoClient(mongoConfig.uri, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+      socketTimeoutMS: 45000
+      // SSL options are now in the URI
     });
     
     await mongoClient.connect();
+    isMongoDBConnected = true;
     console.log('✅ Blog MongoDB connection established');
-    return mongoClient;
+    return { client: mongoClient, isMongoDB: true };
   } catch (error) {
     console.error('❌ Blog MongoDB initialization failed:', error);
+    isMongoDBConnected = false;
+    
     // Fallback to SQLite if MongoDB fails
     console.log('🔄 MongoDB failed, falling back to SQLite');
     
-    if (pool) return pool;
+    if (pool) return { client: pool, isMongoDB: false };
 
-    if (dbDriver === 'sqlite') {
-      const dbDir = path.join(__dirname, '../../../database');
-      const dbFile = path.join(dbDir, `${dbConfig.database}.sqlite`);
-      
-      if (!fs.existsSync(dbDir)) {
-        await fsp.mkdir(dbDir, { recursive: true });
-      }
-      
-      pool = await open({ filename: dbFile, driver: sqlite3.Database });
-      await pool.exec('PRAGMA foreign_keys = ON;');
-      await pool.exec('PRAGMA journal_mode = WAL;');
-      console.log('✅ Blog SQLite connection established (fallback)');
-      return pool;
+    const dbDir = path.join(__dirname, '../../../database');
+    const dbFile = path.join(dbDir, `${dbConfig.database}.sqlite`);
+    
+    if (!fs.existsSync(dbDir)) {
+      await fsp.mkdir(dbDir, { recursive: true });
     }
-
-    pool = mysql.createPool(dbConfig);
-    console.log('✅ Blog MySQL connection established');
-    return pool;
+    
+    pool = await open({ filename: dbFile, driver: sqlite3.Database });
+    await pool.exec('PRAGMA foreign_keys = ON;');
+    await pool.exec('PRAGMA journal_mode = WAL;');
+    console.log('✅ Blog SQLite connection established (fallback)');
+    return { client: pool, isMongoDB: false };
   }
 }
 
@@ -92,10 +94,11 @@ export async function executeQueryFactory(query, params = []) {
     console.log('🔍 Debug: Query params:', params);
     console.log('🔍 Debug: Query type:', query.trim().toUpperCase().split(' ')[0]);
     
-    const dbClient = await initializeDatabaseFactory();
+    const dbResult = await initializeDatabaseFactory();
+    const { client: dbClient, isMongoDB } = dbResult;
     
     // Check if we got MongoDB client
-    if (dbClient && typeof dbClient.db === 'function') {
+    if (isMongoDB && dbClient && typeof dbClient.db === 'function') {
       console.log('✅ Got MongoDB client, connecting to database:', mongoConfig.dbName);
       const db = dbClient.db(mongoConfig.dbName);
       
@@ -303,6 +306,78 @@ export async function executeQueryFactory(query, params = []) {
           return result;
         }
         
+        if (query.includes('FROM comments')) {
+          const collection = db.collection('comments');
+          
+          // Handle SELECT comments
+          if (query.includes('SELECT') && query.includes('FROM comments')) {
+            let filter = {};
+            let limit = 0;
+            let skip = 0;
+            
+            // Handle WHERE article_slug = ? AND status = ?
+            if (query.toLowerCase().includes('where article_slug = ?') && query.toLowerCase().includes('and status = ?')) {
+              filter = {
+                article_slug: params[0],
+                status: params[1]
+              };
+            }
+            // Handle WHERE article_slug = ?
+            else if (query.toLowerCase().includes('where article_slug = ?')) {
+              filter = {
+                article_slug: params[0]
+              };
+            }
+            
+            // Handle LIMIT and OFFSET
+            if (query.toLowerCase().includes('limit ? offset ?')) {
+              limit = params[params.length - 2]; // Second to last parameter
+              skip = params[params.length - 1]; // Last parameter
+            } else if (query.toLowerCase().includes('limit ?')) {
+              limit = params[params.length - 1]; // Last parameter
+            }
+            
+            console.log('🔍 Debug: MongoDB comments filter:', filter);
+            console.log('🔍 Debug: MongoDB pagination - limit:', limit, 'skip:', skip);
+            
+            let queryBuilder = collection.find(filter).sort({ created_at: 1 });
+            
+            if (skip > 0) {
+              queryBuilder = queryBuilder.skip(skip);
+            }
+            if (limit > 0) {
+              queryBuilder = queryBuilder.limit(limit);
+            }
+            
+            const comments = await queryBuilder.toArray();
+            console.log('📝 Debug: MongoDB comments found:', comments.length);
+            
+            return comments.map(comment => ({
+              ...comment,
+              id: comment.id || comment._id
+            }));
+          }
+          
+          // Handle COUNT comments
+          if (query.includes('select count(*) from comments')) {
+            let filter = {};
+            
+            if (query.toLowerCase().includes('where article_slug = ?') && query.toLowerCase().includes('and status = ?')) {
+              filter = {
+                article_slug: params[0],
+                status: params[1]
+              };
+            } else if (query.toLowerCase().includes('where article_slug = ?')) {
+              filter = {
+                article_slug: params[0]
+              };
+            }
+            
+            const count = await collection.countDocuments(filter);
+            return [{ count }];
+          }
+        }
+        
         // Default fallback
         const collection = db.collection('articles');
         const result = await collection.find({}).toArray();
@@ -311,6 +386,39 @@ export async function executeQueryFactory(query, params = []) {
       
       if (upperQuery.startsWith('INSERT')) {
         // Handle INSERT queries
+        if (query.toLowerCase().includes('insert into comments')) {
+          console.log('🔧 Handling comment INSERT in blog databaseFactory');
+          const collection = db.collection('comments');
+          
+          // Get the next available integer ID
+          const lastComment = await collection.findOne({}, { sort: { id: -1 } });
+          const nextId = lastComment ? (lastComment.id + 1) : 1;
+          
+          const commentData = {
+            _id: new ObjectId(),
+            id: nextId,
+            article_slug: params[0],
+            article_title: params[1],
+            author_name: params[2],
+            author_email: params[3] || null,
+            content: params[4],
+            status: params[5] || 'approved',
+            parent_id: params[6] ? parseInt(params[6]) : null,
+            ip_address: params[7] || null,
+            user_agent: params[8] || null,
+            notify_replies: params[9] === 1 || params[9] === true,
+            created_at: new Date(),
+            updated_at: new Date()
+          };
+          
+          console.log('🔧 Comment data to insert:', commentData);
+          
+          const result = await collection.insertOne(commentData);
+          console.log('✅ Comment inserted with MongoDB ID:', result.insertedId);
+          
+          return { insertId: nextId, lastID: nextId };
+        }
+        
         const collection = db.collection('articles');
         const result = await collection.insertOne(params[0]);
         return result;
@@ -319,6 +427,18 @@ export async function executeQueryFactory(query, params = []) {
       if (upperQuery.startsWith('UPDATE')) {
         // Handle UPDATE queries
         const collection = db.collection('articles');
+        
+        // Handle view_count increment
+        if (query.includes('view_count = view_count + 1')) {
+          const result = await collection.updateOne(
+            { id: params[0] },
+            { $inc: { view_count: 1 } },
+            { upsert: false } // Don't create if doesn't exist
+          );
+          return result;
+        }
+        
+        // Handle other UPDATE queries
         const result = await collection.updateOne(
           { _id: params[0] },
           { $set: params[1] }
@@ -353,36 +473,30 @@ export async function executeQueryFactory(query, params = []) {
       return [];
     }
     
-    // Fallback to SQLite/MySQL if MongoDB is not available
-    console.log('🔄 Using fallback database (SQLite/MySQL)');
+    // Fallback to SQLite if MongoDB is not available
+    console.log('🔄 Using fallback database (SQLite)');
     
-    if (dbDriver === 'sqlite') {
-      let translated = query
-        .replace(/NOW\(\)/gi, 'CURRENT_TIMESTAMP')
-        .replace(/INSERT\s+IGNORE/gi, 'INSERT OR IGNORE');
-      
-      const upper = translated.trim().toUpperCase();
-      
-      if (upper.startsWith('SELECT')) {
-        const result = await pool.all(translated, params);
-        return result;
-      }
-      if (upper.startsWith('INSERT')) {
-        const result = await pool.run(translated, params);
-        return result;
-      }
-      if (upper.startsWith('UPDATE')) {
-        const result = await pool.run(translated, params);
-        return result;
-      }
-      if (upper.startsWith('DELETE')) {
-        const result = await pool.run(translated, params);
-        return result;
-      }
-    } else {
-      // MySQL
-      const [rows] = await pool.execute(query, params);
-      return rows;
+    let translated = query
+      .replace(/NOW\(\)/gi, 'CURRENT_TIMESTAMP')
+      .replace(/INSERT\s+IGNORE/gi, 'INSERT OR IGNORE');
+    
+    const upper = translated.trim().toUpperCase();
+    
+    if (upper.startsWith('SELECT')) {
+      const result = await dbClient.all(translated, params);
+      return result;
+    }
+    if (upper.startsWith('INSERT')) {
+      const result = await dbClient.run(translated, params);
+      return result;
+    }
+    if (upper.startsWith('UPDATE')) {
+      const result = await dbClient.run(translated, params);
+      return result;
+    }
+    if (upper.startsWith('DELETE')) {
+      const result = await dbClient.run(translated, params);
+      return result;
     }
   } catch (error) {
     console.error('❌ Query execution error:', error);

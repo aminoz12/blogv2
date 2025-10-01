@@ -1,15 +1,79 @@
 ---
+import { executeQueryFactory } from '../../utils/databaseFactory.js';
+
 export interface Props {
   postSlug: string;
   postTitle: string;
 }
 
 const { postSlug, postTitle } = Astro.props;
+
+console.log('🔍 CommentSection props:', { postSlug, postTitle });
+
+// Fetch comments for this article
+let comments = [];
+let commentCount = 0;
+
+try {
+  // Get comments for this article (including legacy {postSlug} comments)
+  const commentsQuery = `
+    SELECT * FROM comments
+    WHERE article_slug = ? OR article_slug = "{postSlug}"
+    ORDER BY created_at ASC
+    LIMIT 10
+  `;
+  comments = await executeQueryFactory(commentsQuery, [postSlug]);
+  console.log('🔍 Comments fetched:', comments.length, 'comments for slug:', postSlug);
+  
+  // Get comment count (including legacy {postSlug} comments)
+  const countQuery = `
+    SELECT COUNT(*) as count
+    FROM comments
+    WHERE article_slug = ? OR article_slug = "{postSlug}"
+  `;
+  const countResult = await executeQueryFactory(countQuery, [postSlug]);
+  commentCount = countResult[0]?.count || 0;
+  console.log('🔍 Comment count:', commentCount);
+} catch (error) {
+  console.error('❌ Error fetching comments:', error);
+  comments = [];
+  commentCount = 0;
+}
+
+// Helper function to format date
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
+  
+  if (diffInSeconds < 60) return 'Il y a quelques secondes';
+  if (diffInSeconds < 3600) return `Il y a ${Math.floor(diffInSeconds / 60)} minute(s)`;
+  if (diffInSeconds < 86400) return `Il y a ${Math.floor(diffInSeconds / 3600)} heure(s)`;
+  if (diffInSeconds < 2592000) return `Il y a ${Math.floor(diffInSeconds / 86400)} jour(s)`;
+  
+  return date.toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+// Helper function to get initials
+function getInitials(name) {
+  return name
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
+}
 ---
 
 <section class="mt-16 p-8 bg-secondary-800/50 rounded-xl border border-secondary-700/30 shadow-xl">
   <h3 class="text-3xl font-bold text-white mb-8 font-elegant text-center">
-    💬 Commentaires ({Math.floor(Math.random() * 50) + 10})
+    💬 Commentaires ({commentCount})
   </h3>
   
   <!-- Comment Form -->
@@ -68,138 +132,131 @@ const { postSlug, postTitle } = Astro.props;
 
   <!-- Comments List -->
   <div class="space-y-6">
-    <!-- Sample Comments -->
-    <div class="comment-item p-6 bg-secondary-700/20 rounded-xl border border-secondary-600/20 hover:border-secondary-500/40 transition-all duration-200">
-      <div class="flex items-start gap-4 mb-4">
-        <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
-          M
-        </div>
-        <div class="flex-1">
-          <div class="flex flex-wrap items-center gap-3 mb-2">
-            <span class="font-semibold text-white text-lg">Marie Sensuelle</span>
-            <span class="text-sm text-secondary-400">Il y a 2 heures</span>
-            <span class="text-xs px-3 py-1 bg-primary-500/20 text-primary-300 rounded-full border border-primary-500/30">Auteur</span>
-          </div>
-          <p class="text-secondary-200 leading-relaxed text-base">
-            Excellent article ! J'ai particulièrement apprécié la section sur la sécurité. C'est tellement important de bien s'informer avant de commencer. Merci pour ce contenu de qualité ! 🌟
-          </p>
-          <div class="flex items-center gap-6 mt-4">
-            <button class="flex items-center gap-2 text-sm text-secondary-400 hover:text-primary-400 transition-colors hover:scale-105">
-              <span class="text-lg">👍</span>
-              <span class="font-medium">12</span>
-            </button>
-            <button class="flex items-center gap-2 text-sm text-secondary-400 hover:text-primary-400 transition-colors hover:scale-105">
-              <span class="text-lg">💬</span>
-              <span class="font-medium">Répondre</span>
-            </button>
+    {comments.length > 0 ? (
+      comments.map((comment) => (
+        <div class="comment-item p-6 bg-secondary-700/20 rounded-xl border border-secondary-600/20 hover:border-secondary-500/40 transition-all duration-200">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
+              {getInitials(comment.author_name)}
+            </div>
+            <div class="flex-1">
+              <div class="flex flex-wrap items-center gap-3 mb-2">
+                <span class="font-semibold text-white text-lg">{comment.author_name}</span>
+                <span class="text-sm text-secondary-400">{formatDate(comment.created_at)}</span>
+              </div>
+              <p class="text-secondary-200 leading-relaxed text-base whitespace-pre-wrap">
+                {comment.content}
+              </p>
+            </div>
           </div>
         </div>
+      ))
+    ) : (
+      <div class="text-center py-12">
+        <div class="text-6xl mb-4">💬</div>
+        <h4 class="text-xl font-semibold text-secondary-300 mb-2">Aucun commentaire pour le moment</h4>
+        <p class="text-secondary-400">Soyez le premier à partager votre avis sur cet article !</p>
       </div>
-    </div>
-
-    <div class="comment-item p-6 bg-secondary-700/20 rounded-xl border border-secondary-600/20 hover:border-secondary-500/40 transition-all duration-200 ml-8 md:ml-12">
-      <div class="flex items-start gap-4 mb-4">
-        <div class="w-10 h-10 bg-gradient-to-br from-sensual-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold text-base shadow-lg">
-          L
-        </div>
-        <div class="flex-1">
-          <div class="flex flex-wrap items-center gap-3 mb-2">
-            <span class="font-semibold text-white">Luc Libertine</span>
-            <span class="text-sm text-secondary-400">Il y a 1 heure</span>
-          </div>
-          <p class="text-secondary-200 leading-relaxed text-base">
-            @Marie Sensuelle Je suis d'accord ! La sécurité est primordiale. Avez-vous des conseils spécifiques pour les débutants ? 🤔
-          </p>
-          <div class="flex items-center gap-6 mt-4">
-            <button class="flex items-center gap-2 text-sm text-secondary-400 hover:text-primary-400 transition-colors hover:scale-105">
-              <span class="text-lg">👍</span>
-              <span class="font-medium">3</span>
-            </button>
-            <button class="flex items-center gap-2 text-sm text-secondary-400 hover:text-primary-400 transition-colors hover:scale-105">
-              <span class="text-lg">💬</span>
-              <span class="font-medium">Répondre</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="comment-item p-6 bg-secondary-700/20 rounded-xl border border-secondary-600/20 hover:border-secondary-500/40 transition-all duration-200">
-      <div class="flex items-start gap-4 mb-4">
-        <div class="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
-          S
-        </div>
-        <div class="flex-1">
-          <div class="flex flex-wrap items-center gap-3 mb-2">
-            <span class="font-semibold text-white text-lg">Sophie Explorer</span>
-            <span class="text-sm text-secondary-400">Il y a 3 heures</span>
-          </div>
-          <p class="text-secondary-200 leading-relaxed text-base">
-            Très informatif ! J'ai appris beaucoup de choses sur les protocoles de sécurité. C'est rassurant de voir qu'il y a une approche aussi structurée. 👏
-          </p>
-          <div class="flex items-center gap-6 mt-4">
-            <button class="flex items-center gap-2 text-sm text-secondary-400 hover:text-primary-400 transition-colors hover:scale-105">
-              <span class="text-lg">👍</span>
-              <span class="font-medium">8</span>
-            </button>
-            <button class="flex items-center gap-2 text-sm text-secondary-400 hover:text-primary-400 transition-colors hover:scale-105">
-              <span class="text-lg">💬</span>
-              <span class="font-medium">Répondre</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Load More Comments -->
-  <div class="text-center mt-8 pt-6 border-t border-secondary-600/30">
-    <button class="px-6 py-3 bg-secondary-700/50 hover:bg-secondary-600/50 text-secondary-300 hover:text-white rounded-lg transition-all duration-200 border border-secondary-600/30 hover:border-secondary-500/50 flex items-center gap-2 mx-auto">
-      <span>📄</span>
-      <span>Charger plus de commentaires</span>
-    </button>
+    )}
   </div>
 </section>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
+    console.log('🔍 Setting up comment form');
     const commentForm = document.getElementById('comment-form');
     
     if (commentForm) {
+      console.log('✅ Comment form found');
+      
       commentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        console.log('📤 Form submitted');
         
-        const formData = new FormData(e.target as HTMLFormElement);
+        const formData = new FormData(e.target);
         const commentData = {
-          name: formData.get('name'),
-          email: formData.get('email'),
-          comment: formData.get('comment'),
-          notify: formData.get('notify') === 'on',
-          postSlug: '{postSlug}',
-          postTitle: '{postTitle}'
+          article_slug: '{postSlug}',
+          article_title: '{postTitle}',
+          author_name: formData.get('name'),
+          author_email: formData.get('email'),
+          content: formData.get('comment'),
+          notify_replies: formData.get('notify') === 'on'
         };
         
+        console.log('📤 Comment data:', commentData);
+        
+        // Show loading state
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Publication...';
+        submitBtn.disabled = true;
+        
         try {
-          // Simuler l'envoi du commentaire
-          console.log('Comment submitted:', commentData);
+          console.log('🌐 Sending request to /api/comments');
           
-          // Ici vous pourriez envoyer à votre API
-          // const response = await fetch('/api/comments', {
-          //   method: 'POST',
-          //   headers: { 'Content-Type': 'application/json' },
-          //   body: JSON.stringify(commentData)
-          // });
+          const response = await fetch('/api/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(commentData)
+          });
           
-          // Afficher un message de succès
-          alert('Commentaire publié avec succès ! Il sera visible après modération.');
-          (e.target as HTMLFormElement).reset();
+          console.log('📊 Response status:', response.status);
+          const result = await response.json();
+          console.log('📋 Response result:', result);
+          
+          if (result.success) {
+            console.log('✅ Comment submitted successfully');
+            
+            // Show success message
+            const successDiv = document.createElement('div');
+            successDiv.className = 'mb-4 p-4 bg-green-500/20 border border-green-500/30 rounded-lg text-green-300';
+            successDiv.innerHTML = `
+              <div class="flex items-center gap-2">
+                <span class="text-lg">✅</span>
+                <span>${result.message}</span>
+              </div>
+            `;
+            
+            commentForm.parentNode.insertBefore(successDiv, commentForm);
+            
+            // Reset form
+            e.target.reset();
+            
+            // Reload page to show new comment
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          } else {
+            throw new Error(result.error || 'Erreur lors de la publication');
+          }
           
         } catch (error) {
-          console.error('Comment submission error:', error);
-          alert('Une erreur est survenue. Veuillez réessayer.');
+          console.error('❌ Comment submission error:', error);
+          
+          // Show error message
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300';
+          errorDiv.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span class="text-lg">❌</span>
+              <span>Erreur: ${error.message}</span>
+            </div>
+          `;
+          
+          commentForm.parentNode.insertBefore(errorDiv, commentForm);
+          
+          // Remove error message after 5 seconds
+          setTimeout(() => {
+            errorDiv.remove();
+          }, 5000);
+        } finally {
+          // Reset button state
+          submitBtn.textContent = originalText;
+          submitBtn.disabled = false;
         }
       });
+    } else {
+      console.log('❌ Comment form not found');
     }
   });
 </script>
-
